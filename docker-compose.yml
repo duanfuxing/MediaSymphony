@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # MySQL服务
+  mysql:
+    image: mysql:8.0
+    container_name: media_symphony_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./app/services/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./data/mysql:/var/lib/mysql-files
+    restart: unless-stopped
+    networks:
+      - media_symphony_net
+    command: --default-authentication-plugin=mysql_native_password
+
+  # Redis服务
+  redis:
+    image: redis:7.0
+    container_name: media_symphony_redis
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./app/services/redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./data/redis:/data/redis
+    restart: unless-stopped
+    networks:
+      - media_symphony_net
+
+  # 视频场景分割服务
+  video_scene_split:
+    image: catchoco/transnetv2:gpu-v1.0
+    container_name: transnetv2
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      - ./app/services/video_scene_split:/app
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    networks:
+      - media_symphony_net
+
+  # 音频分离服务
+  audio_separation:
+    image: audio_separation:latest
+    container_name: media_symphony_audio_separation
+    volumes:
+      - ./app/services/audio_separation:/app
+      - ./data:/data
+    networks:
+      - media_symphony_net
+    restart: unless-stopped
+
+  # 音频转写服务
+  audio_transcription:
+    image: audio_transcription:latest
+    container_name: media_symphony_audio_transcription
+    volumes:
+      - ./app/services/audio_transcription:/app
+      - ./data:/data
+    networks:
+      - media_symphony_net
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  media_symphony_net:
+    driver: bridge
