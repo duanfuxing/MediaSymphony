@@ -29,8 +29,10 @@ class TaskResponse(BaseModel):
     error: Optional[str] = None
 
 
-@router.post("/", response_model=TaskResponse)
+@router.post("/api/v1/video-handle/create", response_model=TaskResponse)
 async def create_task(request: CreateTaskRequest):
+
+    # 创建taskid
     task_id = str(uuid.uuid4())
     task = {
         "task_id": task_id,
@@ -43,7 +45,7 @@ async def create_task(request: CreateTaskRequest):
     return TaskResponse(**task)
 
 
-@router.get("/{task_id}", response_model=TaskResponse)
+@router.get("/api/v1/video-handle/get/{task_id}", response_model=TaskResponse)
 async def get_task(task_id: str):
     task = tasks_db.get(task_id)
     if not task:
