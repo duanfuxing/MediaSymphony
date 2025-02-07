@@ -1,0 +1,24 @@
+services:
+  audio-separator:
+    image: eleven9809/as:gpu-v1.0
+    container_name: new-as-gpu
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities:
+                - gpu
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      - ../../static-file-serve/static:/tmp
+      - ./:/app
+    ports:
+      - "6005:6000"
+    entrypoint: tail
+    # command: [ "python", "/app/main.py" ]
+    command: [ "-f", "/dev/null" ]
