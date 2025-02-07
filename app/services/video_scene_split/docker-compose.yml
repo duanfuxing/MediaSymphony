@@ -1,0 +1,25 @@
+# gpu service
+version: '3.8'
+
+services:
+  transnetv2:
+    image: catchoco/transnetv2:gpu-v1.0
+    container_name: transnetv2
+    runtime: nvidia  # 使用 NVIDIA GPU 支持
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all  # 让容器使用所有 GPU
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      - ./:/app
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    entrypoint: tail
+    command: ["-f", "/dev/null"]
