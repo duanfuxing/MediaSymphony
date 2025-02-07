@@ -53,4 +53,4 @@ USER transnet
 EXPOSE 5000
 
 # 启动命令
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "server.api_server:app"]
+CMD ["python3", "/app/server/api_server.py"]
