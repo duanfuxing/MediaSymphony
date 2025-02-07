@@ -1,0 +1,47 @@
+# Byte编译文件
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 虚拟环境
+venv/
+env/
+.venv/
+.env/
+
+# 安装的依赖项
+*.egg-info/
+*.egg
+dist/
+build/
+
+# 日志和数据库文件
+*.log
+*.sqlite3
+*.db
+*.sqlite
+
+# 缓存文件
+.cache/
+pip-wheel-metadata/
+
+# 配置文件（如果你有私密信息）
+*.ini
+*.cfg
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# VS Code 编辑器配置
+.vscode/
+
+# PyCharm 编辑器配置
+.idea/
+
+# MacOS 相关文件
+.DS_Store
+
+# 其他
+thumbs.db
+*.swp
+*.swo
