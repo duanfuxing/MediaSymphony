@@ -32,8 +32,13 @@ class TaskResponse(BaseModel):
 @router.post("/api/v1/video-handle/create", response_model=TaskResponse)
 async def create_task(request: CreateTaskRequest):
 
+    # 参数验证
+
     # 创建taskid
     task_id = str(uuid.uuid4())
+
+    #
+
     task = {
         "task_id": task_id,
         "status": TaskStatus.PENDING,
