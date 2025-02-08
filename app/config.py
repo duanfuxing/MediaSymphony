@@ -1,4 +1,4 @@
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 from typing import Optional, Set
 from pathlib import Path
 
@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     APP_NAME: str  # 应用程序名称
     API_V1_STR: str  # API版本前缀
     DEBUG: bool  # 调试模式开关
+    APP_PORT: int  # 应用端口
 
     # 文件存储路径配置
     DATA_DIR: str  # 数据根目录
@@ -37,6 +38,31 @@ class Settings(BaseSettings):
     SCENE_DETECTION_API_PORT: int  # 场景检测服务端口
     AUDIO_SEPARATION_API_PORT: int  # 音频分离服务端口
     AUDIO_TRANSCRIPTION_API_PORT: int  # 音频转写服务端口
+
+    # MySQL配置
+    MYSQL_HOST: str  # MySQL主机地址
+    MYSQL_PORT: int  # MySQL端口
+    MYSQL_DATABASE: str  # MySQL数据库名
+    MYSQL_USER: str  # MySQL用户名
+    MYSQL_PASSWORD: str  # MySQL密码
+    MYSQL_ROOT_PASSWORD: str  # MySQL root密码
+
+    # Redis配置
+    REDIS_HOST: str  # Redis主机地址
+    REDIS_PORT: int  # Redis端口
+    REDIS_PASSWORD: str  # Redis密码
+
+    # 火山引擎配置
+    VOLC_AK: str  # 火山引擎访问密钥ID
+    VOLC_SK: str  # 火山引擎访问密钥密码
+
+    # TOS云存储配置
+    TOS_REGION: str  # TOS区域
+    TOS_ENDPOINT: str  # TOS终端节点
+    TOS_BUCKET: str  # TOS存储桶名称
+    TOS_BUCKET_HOST_PUB: str  # TOS公网访问域名
+    TOS_BUCKET_HOST_PRI: str  # TOS内网访问域名
+    TOS_SCHEME: str  # TOS访问协议
 
     class Config:
         """配置类设置
