@@ -109,6 +109,7 @@ services:
     networks:
       - media_symphony_net
     restart: unless-stopped
+    
 
 volumes:
   mysql_data:
