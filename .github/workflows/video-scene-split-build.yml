@@ -3,13 +3,12 @@ name: TransNetV2 Docker Build and Push
 on:
   push:
     paths:
-      - 'Dockerfile'
       - '.github/workflows/.build.yml'
-      - 'inference/**'
-      - 'setup.py'
-      - 'api_server.py'
-      - 'scene_detection.py'
-      - 'start.sh'
+      - 'app/video_scene_split/Dockerfile'
+      - 'app/video_scene_split/inference/**'
+      - 'app/video_scene_split/setup.py'
+      - 'app/video_scene_split/server/api_server.py'
+      - 'app/video_scene_split/start.sh'
   workflow_dispatch:
 
 jobs:
@@ -17,6 +16,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check if running in upstream repository
+        run: |
+          if [ "$GITHUB_REPOSITORY" != "duanfuxing/MediaSymphony" ]; then
+            echo "This workflow is only triggered in the upstream repository."
+            exit 0
+          fi
+          
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -40,8 +46,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
-          context: ./
-          file: Dockerfile
+          context: app/video_scene_split
+          file: app/video_scene_split/Dockerfile
           push: true
           tags: |
             catchoco/transnetv2:latest
