@@ -1,0 +1,22 @@
+# Use an official Python runtime as a parent image
+FROM python:3.11-slim
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Install necessary packages
+RUN apt-get update && apt-get install -y ffmpeg build-essential
+
+RUN python -m pip install --upgrade pip
+
+RUN --mount=type=cache,target=/root/.cache \
+    pip install "audio-separator[gpu]" fastapi aiohttp python-multipart uvicorn python-dotenv
+
+COPY . /app/
+
+EXPOSE 6000
+
+# Run audio-separator when the container launches
+# ENTRYPOINT ["audio-separator"]
+# 执行 Python 脚本
+CMD ["python", "main.py"]
