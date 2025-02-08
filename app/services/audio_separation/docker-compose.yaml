@@ -1,7 +1,7 @@
 services:
   audio-separator:
-    image: eleven9809/as:gpu-v1.0
-    container_name: new-as-gpu
+    image: catchoco/as:gpu-v1.0
+    container_name: audio-separator-gpu
     runtime: nvidia
     deploy:
       resources:
@@ -18,7 +18,7 @@ services:
       - ../../static-file-serve/static:/tmp
       - ./:/app
     ports:
-      - "6005:6000"
+      - "6000:6000"
     entrypoint: tail
     # command: [ "python", "/app/main.py" ]
     command: [ "-f", "/dev/null" ]
