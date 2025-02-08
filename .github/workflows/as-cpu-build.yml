@@ -9,15 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    if: ${{ github.repository == 'duanfuxing/MediaSymphony' }}
     steps:
-      - name: Check if running in upstream repository
-        run: |
-          if [ "$GITHUB_REPOSITORY" != "duanfuxing/MediaSymphony" ]; then
-            echo "This workflow is only triggered in the upstream repository."
-            exit 0
-          fi
-
       - name: Checkout repository
         uses: actions/checkout@v3
 
