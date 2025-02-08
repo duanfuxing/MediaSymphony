@@ -7,6 +7,9 @@ import httpx
 import os
 from app.config import settings
 from app.utils.logger import Logger
+from fastapi import UploadFile, File
+import aiofiles
+import shutil
 
 router = APIRouter()
 logger = Logger("video_tasks")
@@ -172,3 +175,80 @@ async def get_task(task_id: str):
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     return TaskResponse(**task)
+
+
+@router.post("/api/v1/video-handle/upload", response_model=TaskResponse)
+async def upload_video(file: UploadFile = File(...), uid: str = None):
+    """上传视频文件
+
+    Args:
+        file (UploadFile): 上传的视频文件
+        uid (str, optional): 用户ID
+
+    Returns:
+        TaskResponse: 包含任务ID和初始状态的响应对象
+
+    Raises:
+        HTTPException: 当文件上传失败或格式不正确时抛出相应的错误
+    """
+    if not uid:
+        raise HTTPException(status_code=400, detail="用户ID不能为空")
+
+    # 验证文件类型
+    if not file.content_type.startswith("video/"):
+        raise HTTPException(status_code=400, detail="只支持上传视频文件")
+
+    # 创建任务ID
+    task_id = str(uuid.uuid4())
+    logger.log_request(
+        "POST",
+        "/api/v1/video-handle/upload",
+        {"task_id": task_id, "filename": file.filename, "uid": uid},
+    )
+
+    try:
+        # 读取文件内容到内存以检查大小
+        content = await file.read()
+        if len(content) > settings.MAX_VIDEO_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"视频文件大小超过限制：{len(content)} > {settings.MAX_VIDEO_SIZE} 字节",
+            )
+
+        # 保存文件
+        video_path = f"data/download/{task_id}.mp4"
+        async with aiofiles.open(video_path, "wb") as out_file:
+            await out_file.write(content)
+
+        # 创建任务记录
+        if not tasks_db.create_task(task_id, video_path, uid):
+            raise HTTPException(
+                status_code=500, detail="Failed to create task in database"
+            )
+        logger.log_task_status(task_id, TaskStatus.PENDING)
+
+        # 构建返回数据
+        task = {
+            "task_id": task_id,
+            "status": TaskStatus.PENDING,
+            "video_url": video_path,
+            "uid": uid,
+            "result": None,
+            "error": None,
+        }
+
+        # 启动异步任务
+        from app.tasks import process_video
+
+        process_video.delay(task_id, video_path, uid)
+
+        logger.log_response(200, "/api/v1/video-handle/upload", {"task_id": task_id})
+        return TaskResponse(**task)
+
+    except Exception as e:
+        # 如果发生错误，确保清理已上传的文件
+        video_path = f"data/download/{task_id}.mp4"
+        if os.path.exists(video_path):
+            os.remove(video_path)
+        logger.error("文件上传失败", {"task_id": task_id, "error": str(e)})
+        raise
