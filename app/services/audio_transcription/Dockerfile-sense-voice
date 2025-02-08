@@ -1,0 +1,19 @@
+# 使用基础镜像
+FROM python:3.9-slim
+
+# 设置工作目录
+WORKDIR /app
+
+# 将当前目录下的所有文件和子目录复制到容器的 /app 目录
+COPY . /app/
+
+# 安装依赖
+RUN pip install -r requirements.txt && \
+    pip install aiohttp python-dotenv
+
+# 暴露端口
+EXPOSE 6001
+
+
+# 运行应用程序
+CMD ["python", "main.py"]
