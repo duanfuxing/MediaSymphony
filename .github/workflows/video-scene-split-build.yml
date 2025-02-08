@@ -9,20 +9,12 @@ on:
       - 'app/video_scene_split/setup.py'
       - 'app/video_scene_split/server/api_server.py'
       - 'app/video_scene_split/start.sh'
-  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    if: ${{ github.repository == 'duanfuxing/MediaSymphony' }}
     steps:
-      - name: Check if running in upstream repository
-        run: |
-          if [ "$GITHUB_REPOSITORY" != "duanfuxing/MediaSymphony" ]; then
-            echo "This workflow is only triggered in the upstream repository."
-            exit 0
-          fi
-          
       - name: Checkout repository
         uses: actions/checkout@v3
 
