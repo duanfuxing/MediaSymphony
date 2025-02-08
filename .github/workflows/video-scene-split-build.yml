@@ -4,11 +4,11 @@ on:
   push:
     paths:
       - '.github/workflows/.build.yml'
-      - 'app/video_scene_split/Dockerfile'
-      - 'app/video_scene_split/inference/**'
-      - 'app/video_scene_split/setup.py'
-      - 'app/video_scene_split/server/api_server.py'
-      - 'app/video_scene_split/start.sh'
+      - 'app/services/video_scene_split/Dockerfile'
+      - 'app/services/video_scene_split/inference/**'
+      - 'app/services/video_scene_split/setup.py'
+      - 'app/services/video_scene_split/server/api_server.py'
+      - 'app/services/video_scene_split/start.sh'
 
 jobs:
   build:
@@ -38,8 +38,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
-          context: app/video_scene_split
-          file: app/video_scene_split/Dockerfile
+          context: app/services/video_scene_split
+          file: app/services/video_scene_split/Dockerfile
           push: true
           tags: |
             catchoco/transnetv2:latest
