@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 import os
-from scene_detection import SceneDetector
+from core.detector import SceneDetector
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
