@@ -1,3 +1,3 @@
-from .detector import SceneDetector
+from .scene_detection import SceneDetector
 
 __all__ = ["SceneDetector"]
