@@ -1,3 +1,9 @@
+# 环境变量文件
+.env
+*.env
+.env.*
+!.env.example
+
 # Byte编译文件
 __pycache__/
 *.py[cod]
