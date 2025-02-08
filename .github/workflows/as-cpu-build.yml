@@ -1,0 +1,33 @@
+name: audio separation cpu build CI
+
+on:
+  push:
+    paths:
+      - 'app/services/audio-separation/Dockerfile-as-cpu'
+      - '.github/workflows/as-cpu-build.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'duanfuxing/MediaSymphony' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: app/services/audio-separation  # 设置构建上下文为Dockerfile所在目录
+          file: app/services/audio-separation/Dockerfile-as-cpu  # 指定Dockerfile路径
+          push: true
+          tags: catchoco/as:cpu-v1.0
+          platforms: linux/amd64
