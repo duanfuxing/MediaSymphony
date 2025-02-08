@@ -46,4 +46,4 @@ thumbs.db
 *.swp
 *.swo
 
-audio_separation/iic/*
+app/services/audio_transcription/iic/*
