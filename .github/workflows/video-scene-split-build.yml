@@ -3,7 +3,7 @@ name: TransNetV2 Docker Build and Push
 on:
   push:
     paths:
-      - '.github/workflows/.build.yml'
+      - '.github/workflows/video-scene-split-build.yml'
       - 'app/services/video_scene_split/Dockerfile'
       - 'app/services/video_scene_split/inference/**'
       - 'app/services/video_scene_split/setup.py'
