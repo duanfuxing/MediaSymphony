@@ -64,6 +64,14 @@ class Settings(BaseSettings):
     TOS_BUCKET_HOST_PRI: str  # TOS内网访问域名
     TOS_SCHEME: str  # TOS访问协议
 
+    # 日志配置
+    LOG_LEVEL: str  # 日志级别
+    LOG_FORMAT: str  # 日志格式
+    LOG_DIR: str  # 日志文件目录
+    LOG_FILE_PREFIX: str  # 日志文件名前缀
+    LOG_FILE_MAX_BYTES: int  # 单个日志文件最大大小
+    LOG_FILE_BACKUP_COUNT: int  # 日志文件备份数量
+
     class Config:
         """配置类设置
 

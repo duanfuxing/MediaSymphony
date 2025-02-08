@@ -75,7 +75,30 @@ POST /api/v1/video-tasks/video-handle/create
     "task_id": "任务ID",
     "status": "pending",
     "video_url": "视频URL",
-    "uid": "用户ID"
+    "uid": "用户ID",
+    "result": null,
+    "error": null
+}
+```
+
+#### 上传视频文件
+```http
+POST /api/v1/video-tasks/video-handle/upload
+
+请求体：
+- multipart/form-data
+- 参数：
+  - file: 视频文件
+  - uid: 用户ID
+
+响应：
+{
+    "task_id": "任务ID",
+    "status": "pending",
+    "video_url": "本地文件路径",
+    "uid": "用户ID",
+    "result": null,
+    "error": null
 }
 ```
 

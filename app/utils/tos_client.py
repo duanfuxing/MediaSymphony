@@ -3,18 +3,43 @@ import logging
 from typing import Union, Optional
 from pathlib import Path
 import tos
-from app.utils.logger import setup_logger
+from app.config import settings
 
-logger = setup_logger("tos_client")
+# 配置日志记录器
+logger = logging.getLogger("tos_client")
+logger.setLevel(getattr(logging, settings.LOG_LEVEL))
+
+# 创建文件处理器
+log_file = os.path.join(settings.LOG_DIR, f"{settings.LOG_FILE_PREFIX}_tos.log")
+os.makedirs(os.path.dirname(log_file), exist_ok=True)
+file_handler = logging.handlers.RotatingFileHandler(
+    log_file,
+    maxBytes=settings.LOG_FILE_MAX_BYTES,
+    backupCount=settings.LOG_FILE_BACKUP_COUNT,
+    encoding="utf-8",
+)
+
+# 创建控制台处理器
+console_handler = logging.StreamHandler()
+
+# 设置日志格式
+formatter = logging.Formatter(settings.LOG_FORMAT)
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+
+# 添加处理器
+if not logger.handlers:
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
 
 
 class TOSClient:
     def __init__(self):
-        self.access_key = os.getenv("VOLC_AK")
-        self.secret_key = os.getenv("VOLC_SK")
-        self.endpoint = os.getenv("TOS_ENDPOINT")
-        self.region = os.getenv("TOS_REGION")
-        self.bucket = os.getenv("TOS_BUCKET")
+        self.access_key = settings.VOLC_AK
+        self.secret_key = settings.VOLC_SK
+        self.endpoint = settings.TOS_ENDPOINT
+        self.region = settings.TOS_REGION
+        self.bucket = settings.TOS_BUCKET
 
         if not all(
             [self.access_key, self.secret_key, self.endpoint, self.region, self.bucket]
@@ -62,15 +87,7 @@ class TOSClient:
 
             # 小文件直接上传
             with open(local_file_path, "rb") as f:
-                result = self.client.put_object(
-                    self.bucket,
-                    object_key,
-                    content=f,
-                    storage_class=getattr(
-                        tos.StorageClassType, f"Storage_Class_{storage_class}"
-                    ),
-                    meta=metadata,
-                )
+                result = self.client.put_object(self.bucket, object_key, content=f)
 
                 logger.info(f"文件上传成功: {object_key}")
                 return {
@@ -113,14 +130,7 @@ class TOSClient:
         """
         try:
             # 初始化分片上传
-            init_result = self.client.init_multipart_upload(
-                self.bucket,
-                object_key,
-                storage_class=getattr(
-                    tos.StorageClassType, f"Storage_Class_{storage_class}"
-                ),
-                meta=metadata,
-            )
+            init_result = self.client.init_multipart_upload(self.bucket, object_key)
             upload_id = init_result.upload_id
 
             # 计算分片大小和数量
