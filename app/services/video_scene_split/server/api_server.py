@@ -17,7 +17,7 @@
 
 from flask import Flask, request, jsonify
 import os
-from core.scene_detection import process_video
+from core.scene_detection import SceneDetector
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
@@ -121,8 +121,9 @@ def process_scene_detection():
         fps = cap.get(cv2.CAP_PROP_FPS)
         cap.release()
 
-        # 执行视频场景分割处理
-        scenes = process_video(video_path, output_dir)
+        # 初始化场景检测器并执行处理
+        detector = SceneDetector()
+        scenes = detector.process_video(video_path, output_dir)
 
         # 格式化场景信息，添加帧号和时间戳
         formatted_scenes = []
