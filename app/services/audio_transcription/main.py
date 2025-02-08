@@ -1,10 +1,11 @@
 from fastapi import FastAPI
-from .routes import router
+from routes import router
+from config import settings
 
 app = FastAPI()
 app.include_router(router)
 
 if __name__ == "__main__":
     import uvicorn
-    print("\nAPI Documentation available at: http://127.0.0.1:6001/docs\n")
-    uvicorn.run(app, host="0.0.0.0", port=6001)
+    print(f"\nAPI Documentation available at: http://{settings.HOST}:{settings.PORT}/docs\n")
+    uvicorn.run(app, host=settings.HOST, port=settings.PORT)

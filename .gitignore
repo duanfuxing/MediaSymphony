@@ -45,3 +45,5 @@ pip-wheel-metadata/
 thumbs.db
 *.swp
 *.swo
+
+app/services/audio_transcription/iic/*
