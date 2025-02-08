@@ -38,7 +38,7 @@ services:
 
   # 视频场景分割服务
   video_scene_split:
-    image: catchoco/transnetv2:gpu-v1.0
+    image: catchoco/transnetv2:latest
     container_name: transnetv2
     runtime: nvidia
     deploy:
@@ -53,6 +53,7 @@ services:
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     volumes:
       - ./app/services/video_scene_split:/app
+      - ./data:/data
     ports:
       - "5000:5000"
     restart: unless-stopped
@@ -108,7 +109,7 @@ services:
     networks:
       - media_symphony_net
     restart: unless-stopped
-    
+
 
 volumes:
   mysql_data:
