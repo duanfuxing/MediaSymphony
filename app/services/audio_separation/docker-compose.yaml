@@ -21,4 +21,4 @@ services:
       - "6000:6000"
     entrypoint: tail
     # command: [ "python", "/app/main.py" ]
-    command: [ "-f", "/dev/null" ]
+    command: [ "-f", "/dev/null"]

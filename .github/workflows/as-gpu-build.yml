@@ -31,3 +31,4 @@ jobs:
           push: true
           tags: catchoco/as:gpu-v1.0
           platforms: linux/amd64
+
