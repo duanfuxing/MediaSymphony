@@ -45,3 +45,5 @@ pip-wheel-metadata/
 thumbs.db
 *.swp
 *.swo
+
+audio_separation/iic/*

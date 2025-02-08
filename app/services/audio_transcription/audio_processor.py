@@ -4,13 +4,14 @@ from io import BytesIO
 import numpy as np
 import librosa
 from funasr import AutoModel
+from config import settings
 
 class AudioProcessor:
-    def __init__(self, model_dir: str, device: str = "cuda:0"):
+    def __init__(self, model_dir: str, device: str = settings.CUDA_DEVICE):
         self.model = AutoModel(
             model=model_dir,
             trust_remote_code=True,
-            remote_code="./remote_code_model.py",
+            remote_code="remote_code_model.py",
             vad_model="fsmn-vad",
             vad_kwargs={"max_single_segment_time": 30000},
             device=device,

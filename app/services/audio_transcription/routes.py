@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Form, UploadFile, HTTPException
 from pydantic import HttpUrl, ValidationError
 from typing import Optional
-from .models import ApiResponse
-from .audio_processor import AudioProcessor
+from models import ApiResponse
+from audio_processor import AudioProcessor
 from funasr.utils.postprocess_utils import rich_transcription_postprocess
 
 router = APIRouter()
-processor = AudioProcessor(model_dir="/app/iic/SenseVoiceSmall")
+processor = AudioProcessor(model_dir="./iic/SenseVoiceSmall")
 
 @router.post("/extract_text", response_model=ApiResponse)
 async def upload_audio(
