@@ -15,7 +15,7 @@ def load_model():
                 tf.config.experimental.set_memory_growth(gpu, True)
         except RuntimeError as e:
             print(e)
-    model = tf.saved_model.load("inference/transnetv2-weights/")
+    model = tf.saved_model.load("/app/server/models/transnetv2-weights/")
     return model
 
 
