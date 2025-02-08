@@ -5,7 +5,7 @@ import os
 from tqdm import tqdm
 
 class SceneDetector:
-    def __init__(self, model_path='../models/transnetv2-weights/', threshold=0.5):
+    def __init__(self, model_path='/app/server/models/transnetv2-weights/', threshold=0.5):
         """
         初始化场景检测器
         
