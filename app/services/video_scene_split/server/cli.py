@@ -16,7 +16,7 @@
 import os
 import sys
 import argparse
-from moviepy.editor import VideoFileClip
+from moviepy import VideoFileClip
 from core.scene_detection import SceneDetector
 
 
@@ -40,7 +40,7 @@ def format_time(frame_number: int, fps: float) -> str:
 def main():
     # 解析命令行参数
     parser = argparse.ArgumentParser(description="视频场景切分工具")
-    parser.add_argument("--video", required=True, help="输入视频路径")
+    parser.add_argument("--input", required=True, help="输入视频路径")
     parser.add_argument("--output", required=True, help="输出目录路径")
     parser.add_argument(
         "--weights",
@@ -62,8 +62,8 @@ def main():
     args = parser.parse_args()
 
     # 验证输入文件是否存在
-    if not os.path.exists(args.video):
-        print(f"错误：视频文件 '{args.video}' 不存在")
+    if not os.path.exists(args.input):
+        print(f"错误：视频文件 '{args.input}' 不存在")
         sys.exit(1)
 
     # 创建输出目录
@@ -76,7 +76,7 @@ def main():
         print("正在处理视频...")
         # 获取视频的帧和预测结果
         video_frames, single_frame_predictions, all_frame_predictions = (
-            detector.predict_video(args.video)
+            detector.predict_video(args.input)
         )
         scenes = detector.predictions_to_scenes(
             single_frame_predictions, threshold=args.threshold
@@ -84,7 +84,7 @@ def main():
 
         # 加载视频文件
         print("正在切分场景...")
-        video_clip = VideoFileClip(args.video)
+        video_clip = VideoFileClip(args.input)
 
         # 为每个切片生成独立的输出文件名
         for i, (start, end) in enumerate(scenes):
