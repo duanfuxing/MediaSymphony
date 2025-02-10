@@ -43,12 +43,6 @@ def main():
     parser.add_argument("--input", required=True, help="输入视频路径")
     parser.add_argument("--output", required=True, help="输出目录路径")
     parser.add_argument(
-        "--weights",
-        type=str,
-        default=None,
-        help="TransNet V2 权重文件路径，如果未指定则尝试自动推断位置",
-    )
-    parser.add_argument(
         "--threshold",
         type=float,
         default=0.5,
@@ -71,7 +65,7 @@ def main():
 
     try:
         print("正在加载模型...")
-        detector = SceneDetector(args.weights)
+        detector = SceneDetector()
 
         print("正在处理视频...")
         # 获取视频的帧和预测结果

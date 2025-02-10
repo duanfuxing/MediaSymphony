@@ -17,12 +17,16 @@ class SceneDetector:
     基于TransNetV2模型实现，支持GPU加速。
     """
 
-    def __init__(self, model_dir="/app/server/models/transnetv2-weights"):
+    def __init__(self):
         """初始化场景检测器
 
         Args:
             model_dir (str, optional): 模型权重文件目录路径。如果为None，将使用默认路径。
         """
+
+        # 模型目录
+        model_dir = "/app/server/models/transnetv2-weights"
+
         # GPU配置初始化
         gpus = tf.config.experimental.list_physical_devices("GPU")
         if gpus:
