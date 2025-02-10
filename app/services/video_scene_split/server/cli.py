@@ -42,6 +42,7 @@ def main():
     parser = argparse.ArgumentParser(description="视频场景切分工具")
     parser.add_argument("--input", required=True, help="输入视频路径")
     parser.add_argument("--output", required=True, help="输出目录路径")
+    parser.add_argument("--taskid", help="自定义任务ID")
     parser.add_argument(
         "--threshold",
         type=float,
@@ -59,6 +60,13 @@ def main():
     if not os.path.exists(args.input):
         print(f"错误：视频文件 '{args.input}' 不存在")
         sys.exit(1)
+
+    # 判断taskid是否存在
+    if not args.taskid:
+        args.taskid = str(int(time.time()))
+
+    # 拼接输出目录 args.output/taskid
+    args.output = os.path.join(args.output, args.taskid)
 
     # 创建输出目录
     os.makedirs(args.output, exist_ok=True)
