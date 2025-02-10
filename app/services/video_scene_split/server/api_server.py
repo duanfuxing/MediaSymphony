@@ -22,7 +22,7 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-# 配置文件上传和输出目录
+# 配置文件上传和输出目录 TODO videos 权限问题 ...
 UPLOAD_FOLDER = "videos/uploads"  # 上传文件临时存储目录
 OUTPUT_FOLDER = "videos/outputs"  # 处理结果输出目录
 ALLOWED_EXTENSIONS = {"mp4", "avi", "mov"}  # 允许的视频文件格式
