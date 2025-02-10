@@ -2,7 +2,7 @@ import os
 import logger
 import uuid
 import time
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 from typing import Optional, Dict
 from models import SeparationResponse
