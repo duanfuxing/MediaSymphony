@@ -3,7 +3,7 @@ name: audio separation gpu build CI
 on:
   push:
     paths:
-      - 'app/services/audio-separation/Dockerfile-as-gpu'
+      - 'app/services/audio_separation/Dockerfile-as-gpu'
       - '.github/workflows/as-gpu-build.yml'
 
 jobs:
@@ -26,8 +26,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
-          context: app/services/audio-separation  # 设置构建上下文为Dockerfile所在目录
-          file: app/services/audio-separation/Dockerfile-as-gpu  # 指定Dockerfile路径
+          context: app/services/audio_separation  # 设置构建上下文为Dockerfile所在目录
+          file: app/services/audio_separation/Dockerfile-as-gpu  # 指定Dockerfile路径
           push: true
           tags: catchoco/as:gpu-v1.0
           platforms: linux/amd64

@@ -9,7 +9,7 @@ COPY . /app/
 
 # 安装依赖
 RUN pip install -r requirements.txt && \
-    pip install aiohttp python-dotenv
+    pip install python-dotenv aiohttp 
 
 # 暴露端口
 EXPOSE 6001
