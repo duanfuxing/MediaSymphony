@@ -7,6 +7,7 @@ WORKDIR /app
 # 将当前目录下的所有文件和子目录复制到容器的 /app 目录
 COPY . /app/
 
+
 # 安装依赖
 RUN pip install -r requirements.txt && \
     pip install python-dotenv aiohttp 
