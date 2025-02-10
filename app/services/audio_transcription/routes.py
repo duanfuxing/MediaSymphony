@@ -8,7 +8,7 @@ from funasr.utils.postprocess_utils import rich_transcription_postprocess
 router = APIRouter()
 processor = AudioProcessor(model_dir="./iic/SenseVoiceSmall")
 
-@router.post("/extract_text", response_model=ApiResponse)
+@router.post("/api/v1/audio-transcription/process", response_model=ApiResponse)
 async def upload_audio(
         url: Optional[HttpUrl] = Form(None),
         file: Optional[UploadFile] = Form(None),
