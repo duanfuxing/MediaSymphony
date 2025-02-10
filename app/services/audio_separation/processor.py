@@ -11,8 +11,12 @@ class AudioSeparatorProcessor:
 
     def process_audio(self, aduio_path: str, task_id: str, output_path):
         """处理音频"""
+        self.separator = Separator(
+            output_single_stem="Vocals",
+            model_file_dir=settings.MODEL_DIR,
+            output_dir=output_path
+        )
         self.separator.load_model(model_filename=settings.MODEL_FILENAME)
-        self.separator.output_dir = output_path
         # 修改输出文件的命名
         output_names = {
             "Vocals": f"vocals_{task_id}",
