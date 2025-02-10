@@ -15,8 +15,8 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     volumes:
-      - ../../static-file-serve/static:/tmp
       - ./:/app
+      - ../../data:/data
     ports:
       - "6000:6000"
     entrypoint: tail

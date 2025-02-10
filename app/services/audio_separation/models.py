@@ -1,9 +1,25 @@
-from pydantic import BaseModel, Field
-from typing import List
+from pydantic import BaseModel
+from typing import Dict
 
-# 定义 api 返回体结构
-class ApiResponse(BaseModel):
-    message: str
-    output_files: List[str]
-    request_id: str = Field(..., description="Unique request ID")
-    processing_time: float = Field(..., description="Processing time in seconds")
+# 定义响应结构体
+class SeparationResponse(BaseModel):
+    # 状态
+    status: str
+    # 任务ID
+    task_id: str
+    # 分离后的音频
+    separated_audio: Dict[str, str]
+    # 音频路径
+    file_paths: Dict[str, str]
+
+# 定义请求结构体
+class SeparationRequest(BaseModel):
+    # 音频路径
+    audio_path: str
+    # 模型
+    model: str
+    # 任务ID
+    task_id: str
+    # 输出路径
+    output_path: str
+
