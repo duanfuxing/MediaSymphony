@@ -124,7 +124,7 @@ def process_scene_detection():
 
         # 初始化场景检测器并执行处理
         detector = SceneDetector()
-        scenes = detector.process_video(video_path, output_dir)
+        scenes = detector.process_video(video_path, output_path)
 
         # 格式化场景信息，添加帧号和时间戳
         formatted_scenes = []
@@ -143,7 +143,7 @@ def process_scene_detection():
             {
                 "status": "success",
                 "task_id": task_id,
-                "output_dir": output_dir,
+                "output_dir": output_path,
                 "scenes": formatted_scenes,
             }
         )
