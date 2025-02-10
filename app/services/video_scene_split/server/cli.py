@@ -94,7 +94,7 @@ def main():
 
             # 输出每个视频片段
             segment_clip.write_videofile(
-                output_path, codec="libx264", fps=video_clip.fps, verbose=False
+                output_path, codec="libx264", fps=video_clip.fps
             )
 
         # 如果需要可视化，生成预测结果的可视化图像
