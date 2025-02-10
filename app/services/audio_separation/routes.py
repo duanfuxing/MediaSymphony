@@ -108,8 +108,8 @@ async def separate_audio(request: AudioSeparationRequest):
                 "accompaniment": os.path.basename(output_files[1]) if len(output_files) > 1 else ""
             },
             file_paths={
-                "vocals": output_files[0],
-                "accompaniment": output_files[1] if len(output_files) > 1 else ""
+                "vocals": os.path.join(request.output_path, os.path.basename(output_files[0])),
+                "accompaniment": os.path.join(request.output_path, os.path.basename(output_files[1])) if len(output_files) > 1 else ""
             }
         )
 
