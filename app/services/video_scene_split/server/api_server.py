@@ -22,9 +22,6 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-# 配置文件上传和输出目录
-UPLOAD_FOLDER = "/data/download"  # 上传文件临时存储目录
-OUTPUT_FOLDER = "data/processed"  # 处理结果输出目录
 ALLOWED_EXTENSIONS = {"mp4", "avi", "mov"}  # 允许的视频文件格式
 
 
@@ -95,11 +92,18 @@ def process_scene_detection():
     # 解析请求数据
     data = request.get_json()
     if not data or "video_path" not in data:
-        return jsonify({"error": "视频路径未提供"}), 400
+        return jsonify({"error": "输入视频不能为空"}), 400
+
+    if "output_path" not in data:
+        return jsonify({"error": "输出路径未提供"}), 400
+
+    if "task_id" not in data:
+        return jsonify({"error": "任务ID未提供"}), 400
 
     # 获取请求参数
-    video_path = os.path.join(UPLOAD_FOLDER, data["video_path"])
-    task_id = data.get("task_id")  # 可选参数
+    video_path = data["video_path"]  # 视频路径
+    output_path = data["output_path"]  # 输出路径
+    task_id = data.get("task_id")  # 任务ID
     threshold = data.get("threshold", 0.35)  # 场景切换阈值，默认0.35
     min_scene_length = data.get("min_scene_length", 15)  # 最小场景长度，默认15帧
 
@@ -108,10 +112,7 @@ def process_scene_detection():
         return jsonify({"error": "视频文件不存在"}), 400
 
     # 创建输出目录
-    output_dir = os.path.join(
-        OUTPUT_FOLDER, os.path.basename(video_path).rsplit(".", 1)[0]
-    )
-    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(output_path, exist_ok=True)
 
     try:
         # 获取视频FPS用于时间戳计算
@@ -152,6 +153,4 @@ def process_scene_detection():
 
 
 if __name__ == "__main__":
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    os.makedirs(OUTPUT_FOLDER, exist_ok=True)
     app.run(host="0.0.0.0", port=5000)
