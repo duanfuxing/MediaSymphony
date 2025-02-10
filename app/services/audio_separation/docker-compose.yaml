@@ -16,7 +16,7 @@ services:
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     volumes:
       - ./:/app
-      - ../../data:/data
+      - ../../../data:/data
     ports:
       - "6000:6000"
     entrypoint: tail
