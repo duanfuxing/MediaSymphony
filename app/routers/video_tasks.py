@@ -92,7 +92,13 @@ async def download_and_validate_video(video_url: str, task_id: str) -> str:
 
         # 下载视频
         response = await client.get(video_url)
-        video_path = f"data/download/{task_id}.mp4"
+        # 按年月组织视频文件存储目录
+        from datetime import datetime
+
+        now = datetime.now()
+        year_month_dir = f"data/download/{now.year}/{now.month:02d}"
+        os.makedirs(year_month_dir, exist_ok=True)
+        video_path = f"{year_month_dir}/{task_id}.mp4"
         with open(video_path, "wb") as f:
             f.write(response.content)
 

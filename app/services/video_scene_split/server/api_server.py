@@ -22,9 +22,9 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-# 配置文件上传和输出目录 TODO videos 权限问题 ...
-UPLOAD_FOLDER = "videos/uploads"  # 上传文件临时存储目录
-OUTPUT_FOLDER = "videos/outputs"  # 处理结果输出目录
+# 配置文件上传和输出目录
+UPLOAD_FOLDER = "/data/download"  # 上传文件临时存储目录
+OUTPUT_FOLDER = "data/processed"  # 处理结果输出目录
 ALLOWED_EXTENSIONS = {"mp4", "avi", "mov"}  # 允许的视频文件格式
 
 
@@ -98,7 +98,7 @@ def process_scene_detection():
         return jsonify({"error": "视频路径未提供"}), 400
 
     # 获取请求参数
-    video_path = data["video_path"]
+    video_path = os.path.join(UPLOAD_FOLDER, data["video_path"])
     task_id = data.get("task_id")  # 可选参数
     threshold = data.get("threshold", 0.35)  # 场景切换阈值，默认0.35
     min_scene_length = data.get("min_scene_length", 15)  # 最小场景长度，默认15帧
