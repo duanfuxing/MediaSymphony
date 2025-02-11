@@ -1,21 +1,24 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, UploadFile, File
+from pydantic import BaseModel, constr, validator
 from typing import Optional, Dict, Any
 from enum import Enum
 import uuid
 import httpx
 import os
-from app.config import settings
-from app.utils.logger import Logger
-from fastapi import UploadFile, File
+from datetime import datetime
 import aiofiles
 import shutil
 import json
+import re
+
+from app.config import settings
+from app.utils.logger import Logger
+from app.services.mysql.video_tasks_db import VideoTasksDB
+from app.tasks import process_video
+from app.utils.tos_client import TOSClient
 
 router = APIRouter()
 logger = Logger("video_tasks")
-
-from app.services.mysql.video_tasks_db import VideoTasksDB
 
 # 初始化数据库连接
 tasks_db = VideoTasksDB()
@@ -33,6 +36,17 @@ class TaskStatus(str, Enum):
     FAILED = "failed"  # 处理失败
 
 
+class AudioMode(str, Enum):
+    """音频处理模式枚举类
+
+    用于表示视频处理时的音频模式
+    """
+
+    BOTH = "both"  # 全部模式
+    MUTE = "mute"  # 静音模式
+    UNMUTE = "un-mute"  # 非静音模式
+
+
 class CreateTaskRequest(BaseModel):
     """创建任务请求模型
 
@@ -40,7 +54,14 @@ class CreateTaskRequest(BaseModel):
     """
 
     video_url: str  # 视频URL地址
-    uid: str  # 用户ID
+    uid: constr(min_length=1, max_length=64)  # 用户ID，限制长度1-64
+    video_split_audio_mode: AudioMode = AudioMode.BOTH  # 音频处理模式，默认为全部模式
+
+    @validator("video_url")
+    def validate_video_url(cls, v):
+        if not v.startswith(("http://", "https://")):
+            raise ValueError("视频URL必须以http://或https://开头")
+        return v
 
 
 class TaskResponse(BaseModel):
@@ -57,53 +78,65 @@ class TaskResponse(BaseModel):
     error: Optional[str] = None  # 错误信息
 
 
-async def download_and_validate_video(video_url: str, task_id: str) -> str:
-    """下载并验证视频文件
+async def validate_video_size_and_type(video_url: str, task_id: str) -> None:
+    """验证视频文件大小和类型
 
     Args:
         video_url (str): 视频文件的URL地址
         task_id (str): 任务ID
 
-    Returns:
-        str: 下载后的视频文件本地路径
-
     Raises:
-        HTTPException: 当视频大小超过限制时抛出400错误
+        HTTPException: 当视频大小超过限制或类型不合法时抛出400错误
     """
-    logger.info("开始下载视频", {"video_url": video_url, "task_id": task_id})
-    # 检查视频大小
-    async with httpx.AsyncClient() as client:
-        response = await client.head(video_url)
-        content_length = int(response.headers.get("content-length", 0))
+    logger.info("开始验证视频大小和类型", {"video_url": video_url, "task_id": task_id})
+    # 从配置文件读取允许的视频MIME类型
+    ALLOWED_VIDEO_TYPES = settings.ALLOWED_VIDEO_TYPES
 
-        if content_length > settings.MAX_VIDEO_SIZE:
-            logger.warning(
-                "视频文件大小超过限制",
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.head(video_url)
+            content_length = int(response.headers.get("content-length", 0))
+            content_type = response.headers.get("content-type", "").lower()
+
+            # 验证文件大小
+            if content_length > settings.MAX_VIDEO_SIZE:
+                logger.warning(
+                    "视频文件大小超过限制",
+                    {
+                        "content_length": content_length,
+                        "max_size": settings.MAX_VIDEO_SIZE,
+                        "task_id": task_id,
+                    },
+                )
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"视频文件大小超过限制：{content_length} > {settings.MAX_VIDEO_SIZE} 字节",
+                )
+
+            # 验证文件类型
+            if not any(
+                video_type in content_type for video_type in ALLOWED_VIDEO_TYPES
+            ):
+                logger.warning(
+                    "不支持的视频文件类型",
+                    {"content_type": content_type, "task_id": task_id},
+                )
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"不支持的视频文件类型：{content_type}。支持的类型：MP4, AVI, MOV, MKV, WebM",
+                )
+
+            logger.info(
+                "视频验证通过",
                 {
-                    "content_length": content_length,
-                    "max_size": settings.MAX_VIDEO_SIZE,
                     "task_id": task_id,
+                    "content_length": content_length,
+                    "content_type": content_type,
                 },
             )
-            raise HTTPException(
-                status_code=400,
-                detail=f"视频文件大小超过限制：{content_length} > {settings.MAX_VIDEO_SIZE} 字节",
-            )
-
-        # 下载视频
-        response = await client.get(video_url)
-        # 按年月组织视频文件存储目录
-        from datetime import datetime
-
-        now = datetime.now()
-        year_month_dir = f"data/download/{now.year}/{now.month:02d}"
-        os.makedirs(year_month_dir, exist_ok=True)
-        video_path = f"{year_month_dir}/{task_id}.mp4"
-        with open(video_path, "wb") as f:
-            f.write(response.content)
-
-        logger.info("视频下载完成", {"task_id": task_id, "video_path": video_path})
-        return video_path
+    except httpx.RequestError as e:
+        logger.error("视频URL访问失败", {"task_id": task_id, "error": str(e)})
+        raise HTTPException(status_code=400, detail=f"视频URL访问失败：{str(e)}")
 
 
 @router.post("/create", response_model=TaskResponse)
@@ -128,14 +161,17 @@ async def create_task(request: CreateTaskRequest):
     )
 
     try:
-        # 下载并验证视频
-        video_path = await download_and_validate_video(request.video_url, task_id)
+        # 验证视频大小和类型
+        await validate_video_size_and_type(request.video_url, task_id)
+
+        # 构建输出目录，根据config.py的配置
+        now = datetime.now()
+        output_dir = f"data/processed/{now.year}/{now.month:02d}/{task_id}"
+        os.makedirs(output_dir, exist_ok=True)
 
         # 创建任务记录
         if not tasks_db.create_task(task_id, request.video_url, request.uid):
-            raise HTTPException(
-                status_code=500, detail="Failed to create task in database"
-            )
+            raise HTTPException(status_code=500, detail="任务创建失败, 请稍后重试")
         logger.log_task_status(task_id, TaskStatus.PENDING)
 
         # 构建返回数据
@@ -149,18 +185,19 @@ async def create_task(request: CreateTaskRequest):
         }
 
         # 启动异步任务
-        from app.tasks import process_video
-
-        process_video.delay(task_id, video_path, request.uid)
+        process_video.delay(
+            task_id, request.video_url, request.uid, request.video_split_audio_mode
+        )
 
         logger.log_response(200, "/api/v1/video-tasks/create", {"task_id": task_id})
         return TaskResponse(**task)
 
     except Exception as e:
-        # 如果发生错误，确保清理已下载的文件
-        video_path = f"data/download/{task_id}.mp4"
-        if os.path.exists(video_path):
-            os.remove(video_path)
+        # 更新任务状态为失败
+        if task_id:
+            tasks_db.update_task_status(task_id, TaskStatus.FAILED, str(e))
+            logger.log_task_status(task_id, TaskStatus.FAILED)
+
         logger.error("创建任务失败", {"task_id": task_id, "error": str(e)})
         raise
 
@@ -176,11 +213,18 @@ async def get_task(task_id: str):
         TaskResponse: 包含任务状态和结果的响应对象
 
     Raises:
-        HTTPException: 当任务不存在时抛出404错误
+        HTTPException: 当任务不存在或ID格式不正确时抛出相应错误
     """
+    # 验证task_id格式
+    if not re.match(
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        task_id,
+    ):
+        raise HTTPException(status_code=400, detail="无效的任务ID格式")
+
     task = tasks_db.get_task(task_id)
     if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(status_code=404, detail="任务不存在")
     return TaskResponse(**task)
 
 
@@ -222,8 +266,6 @@ async def upload_video(file: UploadFile = File(...), uid: str = None):
             await out_file.write(content)
 
         # 上传文件到TOS
-        from app.utils.tos_client import TOSClient
-
         tos_client = TOSClient()
         object_key = f"videos/{task_id}/{file.filename}"
         upload_result = tos_client.upload_file(

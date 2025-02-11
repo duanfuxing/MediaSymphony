@@ -29,16 +29,6 @@ class Settings(BaseSettings):
     MAX_VIDEO_SIZE: int  # 最大视频文件大小（字节）
     ALLOWED_VIDEO_TYPES: Set[str]  # 允许的视频文件类型集合
 
-    # 子任务超时配置（单位：秒）
-    SCENE_DETECTION_TIMEOUT: int  # 场景检测任务超时时间
-    AUDIO_SEPARATION_TIMEOUT: int  # 音频分离任务超时时间
-    AUDIO_TRANSCRIPTION_TIMEOUT: int  # 音频转写任务超时时间
-
-    # 子任务API服务配置
-    SCENE_DETECTION_API_PORT: int  # 场景检测服务端口
-    AUDIO_SEPARATION_API_PORT: int  # 音频分离服务端口
-    AUDIO_TRANSCRIPTION_API_PORT: int  # 音频转写服务端口
-
     # MySQL配置
     MYSQL_HOST: str  # MySQL主机地址
     MYSQL_PORT: int  # MySQL端口

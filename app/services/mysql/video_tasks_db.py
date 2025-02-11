@@ -54,32 +54,21 @@ class VideoTasksDB:
             with self.engine.connect() as conn:
                 query = text(
                     """
-                    SELECT taskid, status, video_url, uid, 
-                           scene_cut_output, audio_extract_output, text_convert_output,
-                           error
+                    SELECT taskid, status, video_url, uid, task_progress, error
                     FROM video_split_tasks
                     WHERE taskid = :taskid
                 """
                 )
                 result = conn.execute(query, {"taskid": task_id}).fetchone()
                 if result:
+                    task_progress = json.loads(result.task_progress)
                     return {
                         "task_id": result.taskid,
                         "status": result.status,
                         "video_url": result.video_url,
                         "uid": result.uid,
-                        "result": (
-                            {
-                                "scene_cut_output": result.scene_cut_output,
-                                "audio_extract_output": result.audio_extract_output,
-                                "text_convert_output": result.text_convert_output,
-                            }
-                            if result.scene_cut_output
-                            or result.audio_extract_output
-                            or result.text_convert_output
-                            else None
-                        ),
-                        "error": result.error,
+                        "result": task_progress,
+                        "error": json.loads(result.error) if result.error else None,
                     }
                 return None
         except SQLAlchemyError as e:
@@ -89,7 +78,7 @@ class VideoTasksDB:
     def update_task_status(
         self, task_id: str, status: str, error: Optional[str] = None
     ) -> bool:
-        """更新任务状态
+        """更新主任务状态
 
         Args:
             task_id: 任务ID
@@ -101,15 +90,21 @@ class VideoTasksDB:
         """
         try:
             with self.engine.connect() as conn:
+                error_json = json.dumps({"main": error}) if error else None
                 query = text(
                     """
                     UPDATE video_split_tasks
-                    SET status = :status, error = :error
+                    SET status = :status, error = :error_json
                     WHERE taskid = :taskid
                 """
                 )
                 conn.execute(
-                    query, {"taskid": task_id, "status": status, "error": error}
+                    query,
+                    {
+                        "taskid": task_id,
+                        "status": status,
+                        "error_json": error_json,
+                    },
                 )
                 conn.commit()
                 return True
@@ -118,35 +113,61 @@ class VideoTasksDB:
             return False
 
     def update_task_step_and_output(
-        self, task_id: str, current_step: str, output_type: str, output_value: str
+        self,
+        task_id: str,
+        step: str,
+        status: str,
+        output: Optional[str] = None,
+        error: Optional[str] = None,
     ) -> bool:
-        """更新任务执行步骤和对应的输出结果
+        """更新子任务状态和输出结果
 
         Args:
             task_id: 任务ID
-            current_step: 当前执行步骤
-            output_type: 输出类型（scene_cut_output/audio_extract_output/text_convert_output）
-            output_value: 输出值
+            step: 子任务名称（scene_cut/audio_extract/text_convert）
+            status: 子任务状态
+            output: 输出结果（可选）
+            error: 错误信息（可选）
 
         Returns:
             bool: 更新是否成功
         """
         try:
             with self.engine.connect() as conn:
+                # 获取当前的task_progress和error
                 query = text(
-                    f"""
+                    "SELECT task_progress, error FROM video_split_tasks WHERE taskid = :taskid"
+                )
+                result = conn.execute(query, {"taskid": task_id}).fetchone()
+                if not result:
+                    return False
+
+                # 更新task_progress
+                task_progress = json.loads(result.task_progress)
+                task_progress[step] = {"status": status, "output": output}
+
+                # 更新error（如果有）
+                error_json = json.loads(result.error) if result.error else {}
+                if error:
+                    error_json[step] = error
+                elif step in error_json:
+                    del error_json[step]
+
+                # 执行更新
+                update_query = text(
+                    """
                     UPDATE video_split_tasks
-                    SET current_step = :current_step,
-                        {output_type} = :output_value
+                    SET task_progress = :task_progress,
+                        error = :error_json
                     WHERE taskid = :taskid
                 """
                 )
                 conn.execute(
-                    query,
+                    update_query,
                     {
                         "taskid": task_id,
-                        "current_step": current_step,
-                        "output_value": output_value,
+                        "task_progress": json.dumps(task_progress),
+                        "error_json": json.dumps(error_json) if error_json else None,
                     },
                 )
                 conn.commit()

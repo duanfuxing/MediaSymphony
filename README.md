@@ -67,7 +67,8 @@ POST /api/v1/video-tasks/video-handle/create
 请求体：
 {
     "video_url": "视频URL地址",
-    "uid": "用户ID"
+    "uid": "用户ID",
+    "video_split_audio_mode": "音频处理模式，可选值：both（全部）、mute（静音）、un-mute（非静音），默认为both"
 }
 
 响应：

@@ -5,7 +5,6 @@ import argparse
 import tensorflow as tf
 from tqdm import tqdm
 from moviepy import VideoFileClip
-from transnetv2 import TransNetV2
 import numpy as np
 import tensorflow as tf
 
