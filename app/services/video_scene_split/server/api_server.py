@@ -296,9 +296,14 @@ def process_scene_detection():
     try:
         # 解析和验证请求数据
         data = request.get_json()
-        input_path, output_path, task_id, threshold, visualize = validate_request_data(
-            data
-        )
+        (
+            input_path,
+            output_path,
+            task_id,
+            threshold,
+            visualize,
+            video_split_audio_mode,
+        ) = validate_request_data(data)
 
         logger.info(
             "开始处理视频场景分割",
@@ -336,7 +341,9 @@ def process_scene_detection():
                 raise ValueError(f"加载视频文件失败: {str(e)}")
 
             # 处理视频片段
-            formatted_scenes = process_video_segments(video_clip, scenes, output_path)
+            formatted_scenes = process_video_segments(
+                video_clip, scenes, output_path, video_split_audio_mode
+            )
 
             # 如果需要可视化，生成预测结果的可视化图像
             if visualize:
@@ -359,9 +366,10 @@ def process_scene_detection():
             return jsonify(
                 {
                     "status": "success",
+                    "message": "处理完成",
                     "task_id": task_id,
                     "output_dir": output_path,
-                    "scenes": formatted_scenes,
+                    "data": formatted_scenes,
                 }
             )
 
@@ -374,15 +382,48 @@ def process_scene_detection():
 
     except TimeoutError as e:
         logger.error("处理超时", {"task_id": task_id, "error": str(e)})
-        return jsonify({"error": str(e)}), 408
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": str(e),
+                    "task_id": task_id,
+                    "output_dir": output_path,
+                    "data": [],
+                }
+            ),
+            408,
+        )
     except ValueError as e:
         error_msg = str(e)
         logger.error("请求参数无效", {"error": error_msg})
-        return jsonify({"error": error_msg}), 400
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": error_msg,
+                    "task_id": task_id,
+                    "output_dir": output_path,
+                    "data": [],
+                }
+            ),
+            400,
+        )
     except Exception as e:
         error_msg = str(e)
         logger.error("处理过程中发生异常", {"task_id": task_id, "error": error_msg})
-        return jsonify({"error": error_msg}), 500
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": error_msg,
+                    "task_id": task_id,
+                    "output_dir": output_path,
+                    "data": [],
+                }
+            ),
+            500,
+        )
 
 
 if __name__ == "__main__":

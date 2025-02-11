@@ -130,16 +130,18 @@ POST http://localhost:5000/api/v1/scene-detection/process
     "input_path": "视频文件路径",
     "output_path": "输出目录路径",
     "task_id": "任务ID",
+    "video_split_audio_mode":"mute|un-mute|both" # 音频处理模式，可选值：both（全部）、mute（静音）、un-mute（非静音），默认为both
     "threshold": 0.35,  # 场景切换阈值（可选）
     "visualize": false  # 是否生成预测可视化（可选）
 }
 
 响应：
 {
-    "status": "success",
+    "status": "success|error",
+    "message":"成功或失败的信息",
     "task_id": "任务ID",
     "output_dir": "处理后视频存放目录路径",
-    "scenes": [
+    "data": [
         {
             "start_frame": 0,
             "end_frame": 120,
