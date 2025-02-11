@@ -22,9 +22,6 @@ RUN pip3 install --no-cache-dir ffmpeg-python \
     tqdm \
     moviepy
 
-# 安装TransNetV2
-RUN cd /app && python3 setup.py install
-
 # 设置环境变量
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,video,utility
