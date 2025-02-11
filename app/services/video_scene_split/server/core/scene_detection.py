@@ -27,27 +27,19 @@ class SceneDetector:
         model_dir = "/app/server/models/transnetv2-weights"
 
         # GPU配置初始化
-        gpus = tf.config.experimental.list_physical_devices("GPU")
-        if gpus:
-            try:
-                # 选择第一个 GPU
-                gpu = gpus[0]
-
-                # 设置内存增长为 True，允许 TensorFlow 动态分配内存
-                tf.config.experimental.set_memory_growth(gpu, True)
-
-                # 设置 GPU 内存使用上限（例如，限制使用最多 4GB 内存）
-                tf.config.experimental.set_virtual_device_configuration(
-                    gpu,
-                    [
-                        tf.config.experimental.VirtualDeviceConfiguration(
-                            memory_limit=4096
-                        )
-                    ],
-                )
-
-            except RuntimeError as e:
-                raise RuntimeError(f"[错误] GPU配置错误: {e}")
+        try:
+            gpus = tf.config.experimental.list_physical_devices("GPU")
+            if gpus:
+                # 为所有GPU设置内存动态增长
+                for gpu in gpus:
+                    tf.config.experimental.set_memory_growth(gpu, True)
+                logger.info(f"已启用 {len(gpus)} 个GPU的动态内存分配")
+        except RuntimeError as e:
+            logger.warning(f"[警告] GPU内存配置失败: {e}")
+            logger.info("将使用CPU进行处理")
+        except Exception as e:
+            logger.error(f"[错误] GPU初始化失败: {e}")
+            logger.info("将使用CPU进行处理")
 
         # 设置输入尺寸并加载模型
         self._input_size = (27, 48, 3)  # 模型要求的输入尺寸：高度27，宽度48，3通道
