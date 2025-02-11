@@ -23,7 +23,6 @@ from utils.logger import Logger
 from moviepy import VideoFileClip
 import signal
 from functools import partial
-from app.config import settings
 
 app = Flask(__name__)
 logger = Logger("scene_detection_api")
