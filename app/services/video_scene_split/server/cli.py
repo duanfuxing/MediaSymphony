@@ -100,9 +100,24 @@ def main():
             print(f"  开始时间: {format_time(start, video_clip.fps)}")
             print(f"  结束时间: {format_time(end, video_clip.fps)}")
 
-            # 输出每个视频片段
+            # 获取原视频的编码参数
+            original_bitrate = (
+                str(int(video_clip.reader.bitrate)) + "k"
+                if hasattr(video_clip.reader, "bitrate")
+                else "8000k"
+            )
+            # 获取CPU核心数并设置合适的线程数（保留1-2个核心给系统）
+            cpu_count = os.cpu_count() or 4
+            thread_count = max(1, cpu_count - 2)
+
+            # 输出每个视频片段，使用原视频参数
             segment_clip.write_videofile(
-                output_path, codec="libx264", fps=video_clip.fps
+                output_path,
+                codec="h264_nvenc",  # 使用NVIDIA硬件编码器
+                fps=video_clip.fps,
+                bitrate=original_bitrate,  # 使用原视频码率
+                preset="medium",  # 使用平衡的预设
+                threads=thread_count,  # 动态设置线程数
             )
 
         # 如果需要可视化，生成预测结果的可视化图像
