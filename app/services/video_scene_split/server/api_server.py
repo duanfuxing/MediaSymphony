@@ -24,6 +24,7 @@ from utils.logger import Logger
 from moviepy import VideoFileClip
 import threading
 from functools import partial
+import time
 
 app = Flask(__name__)
 logger = Logger("scene_detection_api")
@@ -156,46 +157,31 @@ def process_scene_detection():
                 raise ValueError(f"加载视频文件失败: {str(e)}")
 
             # 格式化场景信息，添加帧号和时间戳
-            formatted_scenes = []
-            for i, (start, end) in enumerate(scenes):
-                try:
-                    start_time = start / video_clip.fps
-                    end_time = end / video_clip.fps
-                    segment_clip = video_clip.subclipped(start_time, end_time)
-                    if (
-                        not segment_clip
-                        or not hasattr(segment_clip, "reader")
-                        or not segment_clip.reader
-                    ):
-                        logger.error(f"无法创建有效的视频片段 {i + 1}")
-                        raise ValueError(f"无法创建有效的视频片段 {i + 1}")
-
-                    # 为每个视频片段生成唯一文件名，输出到指定目录
-                    output_segment_path = f"{output_path}/segment_{i + 1}.mp4"
-                    logger.info(
-                        f"正在导出场景 {i + 1}/{len(scenes)}",
-                        {
-                            "start_time": format_time(start, video_clip.fps),
-                            "end_time": format_time(end, video_clip.fps),
-                        },
-                    )
-
+            def write_video_segment(segment_clip, output_path, retries=3, delay=1):
+                """尝试写入视频片段，支持重试机制
+            
+                Args:
+                    segment_clip: VideoFileClip对象
+                    output_path: 输出文件路径
+                    retries: 重试次数
+                    delay: 重试延迟（秒）
+                """
+                for attempt in range(retries):
                     try:
                         # 获取原视频的编码参数
                         original_bitrate = "8000k"
                         if (
-                            video_clip
-                            and hasattr(video_clip.reader, "bitrate")
-                            and video_clip.reader.bitrate
+                            segment_clip
+                            and hasattr(segment_clip.reader, "bitrate")
+                            and segment_clip.reader.bitrate
                         ):
-                            original_bitrate = str(int(video_clip.reader.bitrate)) + "k"
-                        # 获取CPU核心数并设置合适的线程数（保留1-2个核心给系统）
+                            original_bitrate = str(int(segment_clip.reader.bitrate)) + "k"
+                        
                         cpu_count = os.cpu_count() or 4
                         thread_count = max(1, cpu_count - 2)
-
-                        # 输出每个视频片段，使用原视频参数
+            
                         segment_clip.write_videofile(
-                            output_segment_path,
+                            output_path,
                             codec="libx264",  # 使用 libx264 编码器代替 h264_nvenc
                             fps=video_clip.fps,
                             bitrate=original_bitrate,  # 使用原视频码率
@@ -204,14 +190,13 @@ def process_scene_detection():
                             audio=True,  # 确保包含音频
                             logger=None,  # 禁用moviepy的内部logger
                         )
+                        return True
                     except Exception as e:
-                        logger.error(f"导出视频片段 {i + 1} 失败: {str(e)}")
+                        if attempt < retries - 1:
+                            time.sleep(delay)
+                            continue
                         raise
-                    finally:
-                        # 确保segment_clip被正确关闭
-                        if segment_clip:
-                            segment_clip.close()
-
+            
                     formatted_scenes.append(
                         {
                             "start_time": format_time(start, video_clip.fps),
