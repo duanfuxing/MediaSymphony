@@ -51,6 +51,3 @@ pip-wheel-metadata/
 thumbs.db
 *.swp
 *.swo
-
-app/services/audio_transcription/iic/*
-!app/services/audio_transcription/iic/speech_fsmn_vad_zh-cn-16k-common-pytorch
