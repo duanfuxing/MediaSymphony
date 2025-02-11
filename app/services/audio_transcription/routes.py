@@ -92,8 +92,8 @@ async def upload_audio(request: AudioRequest):
 
              # 处理结果
             text = rich_transcription_postprocess(res[0]["text"])
-            # 将text结果写入到output_path中, 文件格式为 task_id.txt 
-            output_file = os.path.join(request.output_path, f"{request.task_id}.txt")
+            # 将text结果写入到 output_path 中, 文件格式为 transcription_{task_id}.txt 
+            output_file = os.path.join(request.output_path, f"transcription_{request.task_id}.txt")
             with open(output_file, "w", encoding="utf-8") as f:
                 f.write(text)
 
