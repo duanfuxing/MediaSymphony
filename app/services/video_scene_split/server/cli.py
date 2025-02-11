@@ -39,6 +39,13 @@ def format_time(frame_number: int, fps: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
+class AudioMode:
+    """音频处理模式"""
+
+    MUTE = "mute"  # 静音模式
+    UNMUTE = "un-mute"  # 非静音模式
+
+
 def main():
     # 解析命令行参数
     parser = argparse.ArgumentParser(description="视频场景切分工具")
@@ -55,6 +62,12 @@ def main():
         "--visualize",
         action="store_true",
         help="为每个提取的视频保存预测可视化的PNG文件",
+    )
+    parser.add_argument(
+        "--audio-mode",
+        choices=[AudioMode.MUTE, AudioMode.UNMUTE],
+        default=AudioMode.UNMUTE,
+        help="音频处理模式：mute（静音）或un-mute（保留音频，默认）",
     )
     args = parser.parse_args()
 
@@ -137,9 +150,18 @@ def main():
                 bitrate=original_video_bitrate,  # 使用原视频码率
                 preset="medium",  # 使用平衡的预设
                 threads=thread_count,  # 动态设置线程数
-                audio=True,  # 确保包含音频
-                audio_codec=original_audio_codec,  # 使用原视频的音频编码器
-                audio_bitrate=original_audio_bitrate,  # 使用原视频的音频码率
+                audio=args.audio_mode
+                == AudioMode.UNMUTE,  # 根据音频处理模式决定是否包含音频
+                audio_codec=(
+                    original_audio_codec
+                    if args.audio_mode == AudioMode.UNMUTE
+                    else None
+                ),  # 根据音频处理模式设置音频编码器
+                audio_bitrate=(
+                    original_audio_bitrate
+                    if args.audio_mode == AudioMode.UNMUTE
+                    else None
+                ),  # 根据音频处理模式设置音频码率
                 logger=None,  # 禁用moviepy的内部logger
             )
 

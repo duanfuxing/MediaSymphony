@@ -72,6 +72,13 @@ def timeout_handler():
     raise TimeoutError("视频处理超时，请检查视频文件或调整超时时间设置")
 
 
+class AudioMode:
+    """音频处理模式"""
+
+    MUTE = "mute"  # 静音模式
+    UNMUTE = "un-mute"  # 非静音模式
+
+
 def validate_request_data(data):
     """验证请求数据
 
@@ -79,7 +86,7 @@ def validate_request_data(data):
         data (dict): 请求数据
 
     Returns:
-        tuple: (input_path, output_path, task_id, threshold, visualize)
+        tuple: (input_path, output_path, task_id, threshold, visualize, video_split_audio_mode)
 
     Raises:
         ValueError: 当请求数据无效时抛出异常
@@ -99,6 +106,11 @@ def validate_request_data(data):
     task_id = data["task_id"]
     threshold = data.get("threshold", 0.5)
     visualize = data.get("visualize", False)
+    video_split_audio_mode = data.get("video_split_audio_mode", AudioMode.UNMUTE)
+
+    # 验证音频处理模式
+    if video_split_audio_mode not in [AudioMode.MUTE, AudioMode.UNMUTE]:
+        raise ValueError("不支持的音频处理模式")
 
     # 验证视频文件是否存在
     if not os.path.exists(input_path):
@@ -108,7 +120,14 @@ def validate_request_data(data):
     if not allowed_file(input_path):
         raise ValueError("不支持的视频文件格式")
 
-    return input_path, output_path, task_id, threshold, visualize
+    return (
+        input_path,
+        output_path,
+        task_id,
+        threshold,
+        visualize,
+        video_split_audio_mode,
+    )
 
 
 def detect_video_scenes(input_path: str, threshold: float):
@@ -144,13 +163,21 @@ def detect_video_scenes(input_path: str, threshold: float):
         cap.release()
 
 
-def write_video_segment(segment_clip, output_path, video_clip, retries=3, delay=1):
+def write_video_segment(
+    segment_clip,
+    output_path,
+    video_clip,
+    video_split_audio_mode=AudioMode.UNMUTE,
+    retries=3,
+    delay=1,
+):
     """写入视频片段
 
     Args:
         segment_clip: VideoFileClip对象
         output_path (str): 输出文件路径
         video_clip: 原始视频片段
+        video_split_audio_mode (str): 音频处理模式
         retries (int): 重试次数
         delay (int): 重试延迟（秒）
 
@@ -190,9 +217,18 @@ def write_video_segment(segment_clip, output_path, video_clip, retries=3, delay=
                 bitrate=original_video_bitrate,
                 preset="medium",
                 threads=thread_count,
-                audio=True,
-                audio_codec=original_audio_codec,  # 使用原视频的音频编码器
-                audio_bitrate=original_audio_bitrate,  # 使用原视频的音频码率
+                audio=video_split_audio_mode
+                == AudioMode.UNMUTE,  # 根据音频处理模式决定是否包含音频
+                audio_codec=(
+                    original_audio_codec
+                    if video_split_audio_mode == AudioMode.UNMUTE
+                    else None
+                ),
+                audio_bitrate=(
+                    original_audio_bitrate
+                    if video_split_audio_mode == AudioMode.UNMUTE
+                    else None
+                ),
                 logger=None,
             )
             return True
@@ -203,13 +239,16 @@ def write_video_segment(segment_clip, output_path, video_clip, retries=3, delay=
             raise
 
 
-def process_video_segments(video_clip, scenes, output_path):
+def process_video_segments(
+    video_clip, scenes, output_path, video_split_audio_mode=AudioMode.UNMUTE
+):
     """处理视频片段
 
     Args:
         video_clip: VideoFileClip对象
         scenes (list): 场景列表
         output_path (str): 输出目录路径
+        video_split_audio_mode (str): 音频处理模式
 
     Returns:
         list: 格式化的场景信息列表
@@ -227,7 +266,9 @@ def process_video_segments(video_clip, scenes, output_path):
 
             # 为每个视频片段生成唯一文件名
             output_segment_path = os.path.join(output_path, f"segment_{i + 1}.mp4")
-            write_video_segment(segment_clip, output_segment_path, video_clip)
+            write_video_segment(
+                segment_clip, output_segment_path, video_clip, video_split_audio_mode
+            )
 
             # 添加场景信息
             formatted_scenes.append(
