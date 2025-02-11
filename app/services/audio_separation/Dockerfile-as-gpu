@@ -14,7 +14,7 @@ RUN --mount=type=cache,target=/root/.cache \
 
 COPY . /app/
 
-EXPOSE 6000
+EXPOSE 5001
 
 # Run audio-separator when the container launches
 # ENTRYPOINT ["audio-separator"]

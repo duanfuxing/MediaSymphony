@@ -29,6 +29,6 @@ jobs:
           context: app/services/audio_separation  # 设置构建上下文为Dockerfile所在目录
           file: app/services/audio_separation/Dockerfile-as-gpu  # 指定Dockerfile路径
           push: true
-          tags: catchoco/as:gpu-v1.0
+          tags: catchoco/as:latest
           platforms: linux/amd64
 

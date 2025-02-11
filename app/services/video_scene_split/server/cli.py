@@ -8,8 +8,6 @@
 
 选项：
     --threshold: 场景切换阈值（默认0.5）
-    --batch-size: 批处理大小（默认32）
-    --min-scene-length: 最小场景长度（帧数，默认15）
 
 作者: MediaSymphony Team
 日期: 2024-02
@@ -18,6 +16,7 @@
 import os
 import sys
 import argparse
+from moviepy import VideoFileClip
 from core.scene_detection import SceneDetector
 
 
@@ -39,58 +38,87 @@ def format_time(frame_number: int, fps: float) -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="视频场景分割命令行工具")
-    parser.add_argument("--video", required=True, help="输入视频文件路径")
+    # 解析命令行参数
+    parser = argparse.ArgumentParser(description="视频场景切分工具")
+    parser.add_argument("--input", required=True, help="输入视频路径")
     parser.add_argument("--output", required=True, help="输出目录路径")
+    parser.add_argument("--taskid", help="自定义任务ID")
     parser.add_argument(
-        "--threshold", type=float, default=0.5, help="场景切换阈值（默认0.5）"
+        "--threshold",
+        type=float,
+        default=0.5,
+        help="场景切换阈值（默认0.5）",
     )
     parser.add_argument(
-        "--batch-size", type=int, default=32, help="批处理大小（默认32）"
+        "--visualize",
+        action="store_true",
+        help="为每个提取的视频保存预测可视化的PNG文件",
     )
-    parser.add_argument(
-        "--min-scene-length", type=int, default=15, help="最小场景长度（帧数，默认15）"
-    )
-    parser.add_argument("--model-path", type=str, help="模型路径（可选）")
-
     args = parser.parse_args()
 
     # 验证输入文件是否存在
-    if not os.path.exists(args.video):
-        print(f"错误：视频文件 '{args.video}' 不存在")
+    if not os.path.exists(args.input):
+        print(f"错误：视频文件 '{args.input}' 不存在")
         sys.exit(1)
+
+    # 判断taskid是否存在
+    if not args.taskid:
+        args.taskid = str(int(time.time()))
+
+    # 拼接输出目录 args.output/taskid
+    args.output = os.path.join(args.output, args.taskid)
 
     # 创建输出目录
     os.makedirs(args.output, exist_ok=True)
 
     try:
-        # 初始化场景检测器
-        detector = SceneDetector(model_path=args.model_path)
+        print("正在加载模型...")
+        detector = SceneDetector()
 
-        # 获取视频FPS用于时间戳计算
-        import cv2
-
-        cap = cv2.VideoCapture(args.video)
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        cap.release()
-
-        # 执行场景分割
-        print(f"\n开始处理视频: {args.video}")
-        scenes = detector.process_video(
-            args.video, args.output, batch_size=args.batch_size
+        print("正在处理视频...")
+        # 获取视频的帧和预测结果
+        video_frames, single_frame_predictions, all_frame_predictions = (
+            detector.predict_video(args.input)
+        )
+        scenes = detector.predictions_to_scenes(
+            single_frame_predictions, threshold=args.threshold
         )
 
-        # 打印场景信息
-        print(f"\n检测到 {len(scenes)} 个场景:")
-        for i, (start, end) in enumerate(scenes, 1):
-            start_time = format_time(start, fps)
-            end_time = format_time(end, fps)
-            duration = format_time(end - start, fps)
-            print(
-                f"场景 {i:3d}: {start_time} - {end_time} (持续时间: {duration}, 帧范围: {start}-{end})"
+        # 加载视频文件
+        print("正在切分场景...")
+        video_clip = VideoFileClip(args.input)
+
+        # 为每个切片生成独立的输出文件名
+        for i, (start, end) in enumerate(scenes):
+            start_time = start / video_clip.fps
+            end_time = end / video_clip.fps
+            segment_clip = video_clip.subclipped(start_time, end_time)
+
+            # 为每个视频片段生成唯一文件名，输出到指定目录
+            output_path = f"{args.output}/segment_{i + 1}.mp4"
+            print(f"正在导出场景 {i + 1}/{len(scenes)}...")
+            print(f"  开始时间: {format_time(start, video_clip.fps)}")
+            print(f"  结束时间: {format_time(end, video_clip.fps)}")
+
+            # 输出每个视频片段
+            segment_clip.write_videofile(
+                output_path, codec="libx264", fps=video_clip.fps
             )
 
-        print(f"\n处理完成！输出目录: {args.output}")
+        # 如果需要可视化，生成预测结果的可视化图像
+        if args.visualize:
+            print("正在生成预测可视化...")
+            visualization = detector.visualize_predictions(
+                video_frames, [single_frame_predictions, all_frame_predictions]
+            )
+            visualization.save(f"{args.output}/predictions.png")
+
+        # 关闭视频对象
+        video_clip.close()
+
+        print(f"\n处理完成！")
+        print(f"共检测到 {len(scenes)} 个场景")
+        print(f"输出目录: {args.output}")
 
     except Exception as e:
         print(f"\n错误：处理过程中发生异常: {str(e)}")

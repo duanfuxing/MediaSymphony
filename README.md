@@ -126,11 +126,11 @@ POST http://localhost:5000/api/v1/scene-detection/process
 
 请求体：
 {
+    "input_path": "视频文件路径",
+    "output_path": "输出目录路径",
     "task_id": "任务ID",
-    "video_path": "视频文件路径",
-    "output_path": "/path/to/output",  # 输出目录路径
     "threshold": 0.35,  # 场景切换阈值（可选）
-    "min_scene_length": 15  # 最小场景长度（帧数，可选）
+    "visualize": false  # 是否生成预测可视化（可选）
 }
 
 响应：
