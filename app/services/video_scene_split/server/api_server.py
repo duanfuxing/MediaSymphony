@@ -92,7 +92,7 @@ def process_scene_detection():
         input_path = data["input_path"]  # 视频路径
         output_path = data["output_path"]  # 输出路径
         task_id = data["task_id"]  # 任务ID
-        threshold = data.get("threshold", 0.35)  # 场景切换阈值，默认0.35
+        threshold = data.get("threshold", 0.5)  # 场景切换阈值，默认0.35
         visualize = data.get("visualize", False)  # 是否生成预测可视化
 
         # 验证视频文件是否存在
