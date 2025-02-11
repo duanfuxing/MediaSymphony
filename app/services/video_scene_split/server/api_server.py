@@ -162,8 +162,13 @@ def process_scene_detection():
                     start_time = start / video_clip.fps
                     end_time = end / video_clip.fps
                     segment_clip = video_clip.subclipped(start_time, end_time)
-                    if not segment_clip or not segment_clip.reader:
-                        raise ValueError(f"无法创建视频片段 {i + 1}")
+                    if (
+                        not segment_clip
+                        or not hasattr(segment_clip, "reader")
+                        or not segment_clip.reader
+                    ):
+                        logger.error(f"无法创建有效的视频片段 {i + 1}")
+                        raise ValueError(f"无法创建有效的视频片段 {i + 1}")
 
                     # 为每个视频片段生成唯一文件名，输出到指定目录
                     output_segment_path = f"{output_path}/segment_{i + 1}.mp4"
@@ -177,11 +182,13 @@ def process_scene_detection():
 
                     try:
                         # 获取原视频的编码参数
-                        original_bitrate = (
-                            str(int(video_clip.reader.bitrate)) + "k"
-                            if hasattr(video_clip.reader, "bitrate")
-                            else "8000k"
-                        )
+                        original_bitrate = "8000k"
+                        if (
+                            video_clip
+                            and hasattr(video_clip.reader, "bitrate")
+                            and video_clip.reader.bitrate
+                        ):
+                            original_bitrate = str(int(video_clip.reader.bitrate)) + "k"
                         # 获取CPU核心数并设置合适的线程数（保留1-2个核心给系统）
                         cpu_count = os.cpu_count() or 4
                         thread_count = max(1, cpu_count - 2)
