@@ -23,8 +23,7 @@ app.include_router(router)
 # 确保目录存在
 dirs_to_check = [
     settings.MODEL_DIR,
-    settings.OUTPUT_DIR,
-    settings.TEMP_DIR
+    settings.OUTPUT_DIR
 ]
 
 for directory in dirs_to_check:
