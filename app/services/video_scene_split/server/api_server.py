@@ -185,12 +185,6 @@ def process_scene_detection():
                         bitrate=original_bitrate,  # 使用原视频码率
                         preset="medium",  # 使用平衡的预设
                         threads=thread_count,  # 动态设置线程数
-                        ffmpeg_params=[
-                            "-hide_banner",
-                            "-loglevel",
-                            "error",
-                        ],  # 控制ffmpeg输出
-                        logger=None,  # 禁用默认logger
                     )
                 finally:
                     # 确保segment_clip被正确关闭
