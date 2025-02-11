@@ -16,6 +16,16 @@ class Settings(BaseSettings):
     DEBUG: bool  # 调试模式开关
     APP_PORT: int  # 应用端口
 
+    # API服务端口配置
+    SCENE_DETECTION_API_PORT: int = 5001  # 场景分割服务端口
+    AUDIO_SEPARATION_API_PORT: int = 5002  # 音频分离服务端口
+    AUDIO_TRANSCRIPTION_API_PORT: int = 5003  # 语音转写服务端口
+
+    # API超时配置（单位：秒）
+    SCENE_DETECTION_TIMEOUT: int = 1800  # 场景分割超时时间
+    AUDIO_SEPARATION_TIMEOUT: int = 1800  # 音频分离超时时间
+    AUDIO_TRANSCRIPTION_TIMEOUT: int = 1800  # 语音转写超时时间
+
     # 文件存储路径配置
     DATA_DIR: str  # 数据根目录
     UPLOAD_DIR: str  # 上传文件存储目录
