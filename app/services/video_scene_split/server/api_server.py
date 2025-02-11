@@ -180,7 +180,7 @@ def process_scene_detection():
                     # 输出每个视频片段，使用原视频参数
                     segment_clip.write_videofile(
                         output_segment_path,
-                        codec="h264_nvenc",  # 使用NVIDIA硬件编码器
+                        codec="libx264",  # 使用 libx264 编码器代替 h264_nvenc
                         fps=video_clip.fps,
                         bitrate=original_bitrate,  # 使用原视频码率
                         preset="medium",  # 使用平衡的预设
