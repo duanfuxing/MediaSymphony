@@ -16,8 +16,10 @@
 import os
 import sys
 import argparse
+import time
 from moviepy import VideoFileClip
 from core.scene_detection import SceneDetector
+from utils.logger import Logger
 
 
 def format_time(frame_number: int, fps: float) -> str:
@@ -72,8 +74,10 @@ def main():
     os.makedirs(args.output, exist_ok=True)
 
     try:
-        print("正在加载模型...")
-        detector = SceneDetector()
+        # 初始化日志记录器
+        logger = Logger("scene_detection_cli")
+        logger.info("正在加载模型...")
+        detector = SceneDetector(logger=logger)
 
         print("正在处理视频...")
         # 获取视频的帧和预测结果

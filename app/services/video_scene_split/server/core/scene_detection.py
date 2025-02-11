@@ -16,12 +16,14 @@ class SceneDetector:
     基于TransNetV2模型实现，支持GPU加速。
     """
 
-    def __init__(self):
+    def __init__(self, logger=None):
         """初始化场景检测器
 
         Args:
+            logger: 日志记录器实例
             model_dir (str, optional): 模型权重文件目录路径。如果为None，将使用默认路径。
         """
+        self.logger = logger
 
         # 模型目录
         model_dir = "/app/server/models/transnetv2-weights"
@@ -33,13 +35,16 @@ class SceneDetector:
                 # 为所有GPU设置内存动态增长
                 for gpu in gpus:
                     tf.config.experimental.set_memory_growth(gpu, True)
-                logger.info(f"已启用 {len(gpus)} 个GPU的动态内存分配")
+                if self.logger:
+                    self.logger.info(f"已启用 {len(gpus)} 个GPU的动态内存分配")
         except RuntimeError as e:
-            logger.warning(f"[警告] GPU内存配置失败: {e}")
-            logger.info("将使用CPU进行处理")
+            if self.logger:
+                self.logger.warning(f"[警告] GPU内存配置失败: {e}")
+                self.logger.info("将使用CPU进行处理")
         except Exception as e:
-            logger.error(f"[错误] GPU初始化失败: {e}")
-            logger.info("将使用CPU进行处理")
+            if self.logger:
+                self.logger.error(f"[错误] GPU初始化失败: {e}")
+                self.logger.info("将使用CPU进行处理")
 
         # 设置输入尺寸并加载模型
         self._input_size = (27, 48, 3)  # 模型要求的输入尺寸：高度27，宽度48，3通道

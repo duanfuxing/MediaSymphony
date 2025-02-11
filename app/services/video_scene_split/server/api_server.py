@@ -128,7 +128,7 @@ def detect_video_scenes(input_path: str, threshold: float):
     try:
         # 初始化场景检测器并执行处理
         logger.info("正在加载模型...")
-        detector = SceneDetector()
+        detector = SceneDetector(logger=logger)
 
         logger.info("正在处理视频...")
         # 获取视频的帧和预测结果
