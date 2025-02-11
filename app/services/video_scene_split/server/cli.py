@@ -123,7 +123,6 @@ def main():
                     "-loglevel",
                     "error",
                 ],  # 控制ffmpeg输出
-                verbose=False,  # 禁用详细输出
                 logger=None,  # 禁用默认logger
             )
 
