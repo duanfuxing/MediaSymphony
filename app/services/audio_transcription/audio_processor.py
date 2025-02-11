@@ -1,10 +1,9 @@
-from fastapi import HTTPException
-import aiohttp
 from io import BytesIO
-import numpy as np
+import soundfile as sf
 import librosa
 from funasr import AutoModel
 from config import settings
+from io import BytesIO
 
 class AudioProcessor:
     def __init__(self, model_dir: str, device: str = settings.CUDA_DEVICE):
@@ -17,39 +16,48 @@ class AudioProcessor:
             device=device,
         )
 
-    async def process_url(self, url: str) -> np.ndarray:
-        """从URL下载并处理音频"""
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                    url,
-                    headers={
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-                    },
-            ) as response:
-                if response.status != 200:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Failed to download audio: {response.status}",
-                    )
-                audio_bytes = await response.read()
-                return self.process_audio_bytes(audio_bytes)
+    def process_audio_bytes(self, audio_path: str) -> bytes:
+        """处理音频文件并返回字节数据"""
+        try:
+            # 加载音频并重采样为 16kHz
+            audio, _ = librosa.load(audio_path, sr=16000)
+            
+            # 创建内存缓冲区
+            audio_buffer = BytesIO()
+            
+            # 将音频数据写入缓冲区
+            sf.write(audio_buffer, audio, 16000, format='wav')
+            
+            # 获取字节数据
+            audio_buffer.seek(0)
+            return audio_buffer.read()
+            
+        except Exception as e:
+            raise Exception(f"音频处理失败: {str(e)}")
 
-    def process_audio_bytes(self, audio_bytes: bytes) -> np.ndarray:
-        """处理音频字节数据"""
-        audio_io = BytesIO(audio_bytes)
-        waveform, sr = librosa.load(audio_io, sr=16000)  # 统一采样率为16kHz
-        return waveform
-
-    def generate_text(self,
-                      audio_data: np.ndarray,
-                      language: str = "zn",
-                      use_itn: bool = True) -> dict:
-        """生成文本转写结果"""
-        return self.model.generate(
-            input=audio_data,
-            language=language,
-            use_itn=use_itn,
-            batch_size_s=60,
-            merge_vad=True,
-            merge_length_s=15,
-        )
+    def generate_text(self, audio_data: str, language: str = "zn", use_itn: bool = True):
+        """
+        生成音频转写文本
+        :param audio_data: 音频文件路径
+        :param language: 语言代码
+        :param use_itn: 是否使用 ITN
+        :return: 转写结果
+        """
+        try:
+            # 处理音频文件
+            processed_audio = self.process_audio_bytes(audio_data)
+            
+            # 调用模型进行转写
+            result = self.model.generate(
+                input=processed_audio,
+                language=language,
+                use_itn=use_itn,
+                batch_size_s=60,
+                merge_vad=True,
+                merge_length_s=15,
+            )
+            
+            return result
+            
+        except Exception as e:
+            raise Exception(f"转写失败: {str(e)}")

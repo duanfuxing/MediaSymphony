@@ -57,7 +57,7 @@ async def separate_audio(request: AudioSeparationRequest):
             error_msg = f"Input audio file not found: {request.audio_path}"
             new_logger.error(f"Request failed - task_id: {request.task_id}, error: {error_msg}")
             return SeparationResponse(
-                status="failed",
+                status="error",
                 task_id=request.task_id,
                 message=error_msg
             )
@@ -66,7 +66,7 @@ async def separate_audio(request: AudioSeparationRequest):
             error_msg = f"Cannot create or access output directory: {request.output_path}"
             new_logger.error(f"Request failed - task_id: {request.task_id}, error: {error_msg}")
             return SeparationResponse(
-                status="failed",
+                status="error",
                 task_id=request.task_id,
                 message=error_msg
             )
@@ -82,7 +82,7 @@ async def separate_audio(request: AudioSeparationRequest):
             error_msg = f"Audio processing failed: {str(e)}"
             new_logger.error(f"Processing failed - task_id: {request.task_id}, error: {error_msg}")
             return SeparationResponse(
-                status="failed",
+                status="error",
                 task_id=request.task_id,
                 message=error_msg
             )
@@ -93,7 +93,7 @@ async def separate_audio(request: AudioSeparationRequest):
         #     error_msg = "Failed to generate output files"
         #     new_logger.error(f"Output validation failed - task_id: {request.task_id}, error: {error_msg}")
         #     return SeparationResponse(
-        #         status="failed",
+        #         status="error",
         #         task_id=request.task_id,
         #         message=error_msg
         #     )
@@ -131,7 +131,7 @@ async def separate_audio(request: AudioSeparationRequest):
         )
         
         return SeparationResponse(
-            status="failed",
+            status="error",
             task_id=request.task_id,
             message=error_msg
         )
