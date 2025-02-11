@@ -209,7 +209,7 @@ def process_video_segments(video_clip, scenes, output_path):
         try:
             start_time = start / video_clip.fps
             end_time = end / video_clip.fps
-            segment_clip = video_clip.subclip(start_time, end_time)
+            segment_clip = video_clip.subclipped(start_time, end_time)
 
             # 为每个视频片段生成唯一文件名
             output_segment_path = os.path.join(output_path, f"segment_{i + 1}.mp4")
