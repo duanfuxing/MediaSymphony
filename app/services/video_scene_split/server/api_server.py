@@ -28,11 +28,13 @@ from app.config import settings
 app = Flask(__name__)
 logger = Logger("scene_detection_api")
 
-# 从配置文件获取超时时间
-SCENE_DETECTION_TIMEOUT = settings.SCENE_DETECTION_TIMEOUT
+# 从配置文件获取超时时间 1800s
+SCENE_DETECTION_TIMEOUT = 1800
 
 # 从配置文件获取允许的视频文件格式
-ALLOWED_EXTENSIONS = {ext.split("/")[-1] for ext in settings.ALLOWED_VIDEO_TYPES}
+ALLOWED_EXTENSIONS = {
+    ext.split("/")[-1] for ext in ["video/mp4", "video/avi", "video/mov"]
+}
 
 
 def allowed_file(filename: str) -> bool:
@@ -225,4 +227,4 @@ def process_scene_detection():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=settings.SCENE_DETECTION_API_PORT)
+    app.run(host="0.0.0.0", port=5000)
