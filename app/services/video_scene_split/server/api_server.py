@@ -199,6 +199,9 @@ def process_video_segments(video_clip, scenes, output_path):
 
     Returns:
         list: 格式化的场景信息列表
+
+    Raises:
+        Exception: 当视频片段处理失败时抛出异常
     """
     formatted_scenes = []
 
@@ -221,6 +224,11 @@ def process_video_segments(video_clip, scenes, output_path):
                     "end_time": format_time(end, video_clip.fps),
                 }
             )
+        except Exception as e:
+            logger.error(f"处理视频片段 {i + 1} 失败: {str(e)}")
+            raise
+
+    return formatted_scenes
 
 
 @app.route("/api/v1/scene-detection/process", methods=["POST"])
@@ -233,7 +241,9 @@ def process_scene_detection():
     try:
         # 解析和验证请求数据
         data = request.get_json()
-        input_path, output_path, task_id, threshold, visualize = validate_request_data(data)
+        input_path, output_path, task_id, threshold, visualize = validate_request_data(
+            data
+        )
 
         logger.info(
             "开始处理视频场景分割",
@@ -256,8 +266,8 @@ def process_scene_detection():
         video_clip = None
         try:
             # 检测视频场景
-            video_frames, scenes, single_frame_predictions, all_frame_predictions = detect_video_scenes(
-                input_path, threshold
+            video_frames, scenes, single_frame_predictions, all_frame_predictions = (
+                detect_video_scenes(input_path, threshold)
             )
 
             # 加载视频文件
