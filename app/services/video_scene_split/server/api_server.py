@@ -216,6 +216,7 @@ def process_scene_detection():
         logger.error("处理超时", {"task_id": task_id, "error": str(e)})
         return jsonify({"error": str(e)}), 408
     except Exception as e:
+        print(f"\n错误：处理过程中发生异常: {str(e)}")
         # 处理过程中的错误
         error_msg = str(e)
         logger.error("处理过程中发生异常", {"task_id": task_id, "error": error_msg})
