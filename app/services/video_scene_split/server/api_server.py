@@ -21,7 +21,7 @@ from core.scene_detection import SceneDetector
 from werkzeug.utils import secure_filename
 from utils.logger import Logger
 from moviepy import VideoFileClip
-import signal
+import threading
 from functools import partial
 
 app = Flask(__name__)
@@ -65,7 +65,7 @@ def format_time(frame_number: int, fps: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
-def timeout_handler(signum, frame):
+def timeout_handler():
     raise TimeoutError("视频处理超时，请检查视频文件或调整超时时间设置")
 
 
@@ -117,9 +117,9 @@ def process_scene_detection():
         # 创建输出目录
         os.makedirs(output_path, exist_ok=True)
 
-        # 设置请求超时处理
-        signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(SCENE_DETECTION_TIMEOUT)
+        # 设置超时定时器
+        timer = threading.Timer(SCENE_DETECTION_TIMEOUT, timeout_handler)
+        timer.start()
 
         # 获取视频FPS用于时间戳计算
         cap = None
@@ -206,6 +206,8 @@ def process_scene_detection():
                 }
             )
         finally:
+            # 取消超时定时器
+            timer.cancel()
             # 确保资源正确释放
             if cap is not None:
                 cap.release()
@@ -216,7 +218,6 @@ def process_scene_detection():
         logger.error("处理超时", {"task_id": task_id, "error": str(e)})
         return jsonify({"error": str(e)}), 408
     except Exception as e:
-        print(f"\n错误：处理过程中发生异常: {str(e)}")
         # 处理过程中的错误
         error_msg = str(e)
         logger.error("处理过程中发生异常", {"task_id": task_id, "error": error_msg})
