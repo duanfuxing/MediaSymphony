@@ -17,6 +17,7 @@
 
 from flask import Flask, request, jsonify
 import os
+import cv2
 from core.scene_detection import SceneDetector
 from werkzeug.utils import secure_filename
 from utils.logger import Logger
@@ -27,8 +28,9 @@ from functools import partial
 app = Flask(__name__)
 logger = Logger("scene_detection_api")
 
-# 从配置文件获取超时时间 1800s
-SCENE_DETECTION_TIMEOUT = 1800
+# 配置常量
+SCENE_DETECTION_TIMEOUT = 1800  # 从配置文件获取超时时间 1800s
+VIDEO_CODEC = "libx264"  # 视频编码器
 
 # 从配置文件获取允许的视频文件格式
 ALLOWED_EXTENSIONS = {
@@ -164,11 +166,14 @@ def process_scene_detection():
                     },
                 )
 
-                # 输出每个视频片段
-                segment_clip.write_videofile(
-                    output_segment_path, codec="libx264", fps=video_clip.fps
-                )
-                segment_clip.close()
+                try:
+                    # 输出每个视频片段
+                    segment_clip.write_videofile(
+                        output_segment_path, codec=VIDEO_CODEC, fps=video_clip.fps
+                    )
+                finally:
+                    # 确保segment_clip被正确关闭
+                    segment_clip.close()
 
                 formatted_scenes.append(
                     {
