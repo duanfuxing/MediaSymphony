@@ -160,13 +160,25 @@ def write_video_segment(segment_clip, output_path, video_clip, retries=3, delay=
     for attempt in range(retries):
         try:
             # 获取原视频的编码参数
-            original_bitrate = "8000k"
-            if (
-                segment_clip
-                and hasattr(segment_clip.reader, "bitrate")
-                and segment_clip.reader.bitrate
-            ):
-                original_bitrate = str(int(segment_clip.reader.bitrate)) + "k"
+            original_video_bitrate = "8000k"
+            original_audio_bitrate = "192k"
+            original_audio_codec = "aac"
+
+            if video_clip.reader:
+                if hasattr(video_clip.reader, "bitrate") and video_clip.reader.bitrate:
+                    original_video_bitrate = str(int(video_clip.reader.bitrate)) + "k"
+                if (
+                    hasattr(video_clip.reader, "audio_bitrate")
+                    and video_clip.reader.audio_bitrate
+                ):
+                    original_audio_bitrate = (
+                        str(int(video_clip.reader.audio_bitrate)) + "k"
+                    )
+                if (
+                    hasattr(video_clip.reader, "audio_codec")
+                    and video_clip.reader.audio_codec
+                ):
+                    original_audio_codec = video_clip.reader.audio_codec
 
             cpu_count = os.cpu_count() or 4
             thread_count = max(1, cpu_count - 2)
@@ -175,10 +187,12 @@ def write_video_segment(segment_clip, output_path, video_clip, retries=3, delay=
                 output_path,
                 codec="libx264",
                 fps=video_clip.fps,
-                bitrate=original_bitrate,
+                bitrate=original_video_bitrate,
                 preset="medium",
                 threads=thread_count,
                 audio=True,
+                audio_codec=original_audio_codec,  # 使用原视频的音频编码器
+                audio_bitrate=original_audio_bitrate,  # 使用原视频的音频码率
                 logger=None,
             )
             return True

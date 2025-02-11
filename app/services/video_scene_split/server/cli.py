@@ -105,11 +105,26 @@ def main():
             print(f"  结束时间: {format_time(end, video_clip.fps)}")
 
             # 获取原视频的编码参数
-            original_bitrate = (
-                str(int(video_clip.reader.bitrate)) + "k"
-                if hasattr(video_clip.reader, "bitrate")
-                else "8000k"
-            )
+            original_video_bitrate = "8000k"
+            original_audio_bitrate = "192k"
+            original_audio_codec = "aac"
+
+            if video_clip.reader:
+                if hasattr(video_clip.reader, "bitrate") and video_clip.reader.bitrate:
+                    original_video_bitrate = str(int(video_clip.reader.bitrate)) + "k"
+                if (
+                    hasattr(video_clip.reader, "audio_bitrate")
+                    and video_clip.reader.audio_bitrate
+                ):
+                    original_audio_bitrate = (
+                        str(int(video_clip.reader.audio_bitrate)) + "k"
+                    )
+                if (
+                    hasattr(video_clip.reader, "audio_codec")
+                    and video_clip.reader.audio_codec
+                ):
+                    original_audio_codec = video_clip.reader.audio_codec
+
             # 获取CPU核心数并设置合适的线程数（保留1-2个核心给系统）
             cpu_count = os.cpu_count() or 4
             thread_count = max(1, cpu_count - 2)
@@ -117,12 +132,14 @@ def main():
             # 输出每个视频片段，使用原视频参数
             segment_clip.write_videofile(
                 output_path,
-                codec="libx264",  # 使用 libx264 编码器代替 h264_nvenc
+                codec="libx264",  # 使用 libx264 编码器
                 fps=video_clip.fps,
-                bitrate=original_bitrate,  # 使用原视频码率
+                bitrate=original_video_bitrate,  # 使用原视频码率
                 preset="medium",  # 使用平衡的预设
                 threads=thread_count,  # 动态设置线程数
                 audio=True,  # 确保包含音频
+                audio_codec=original_audio_codec,  # 使用原视频的音频编码器
+                audio_bitrate=original_audio_bitrate,  # 使用原视频的音频码率
                 logger=None,  # 禁用moviepy的内部logger
             )
 
