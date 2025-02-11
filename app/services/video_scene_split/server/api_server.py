@@ -222,9 +222,6 @@ def process_scene_detection():
         error_msg = str(e)
         logger.error("处理过程中发生异常", {"task_id": task_id, "error": error_msg})
         return jsonify({"error": error_msg}), 500
-    finally:
-        # 确保取消超时设置
-        signal.alarm(0)
 
 
 if __name__ == "__main__":
