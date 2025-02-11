@@ -147,55 +147,73 @@ def process_scene_detection():
 
             # 加载视频文件
             logger.info("正在切分场景...")
-            video_clip = VideoFileClip(input_path)
+            try:
+                video_clip = VideoFileClip(input_path)
+                if not video_clip.reader or not hasattr(video_clip.reader, "fps"):
+                    raise ValueError("无法正确加载视频文件，请检查视频格式是否正确")
+            except Exception as e:
+                logger.error(f"加载视频文件失败: {str(e)}")
+                raise ValueError(f"加载视频文件失败: {str(e)}")
 
             # 格式化场景信息，添加帧号和时间戳
             formatted_scenes = []
             for i, (start, end) in enumerate(scenes):
-                start_time = start / video_clip.fps
-                end_time = end / video_clip.fps
-                segment_clip = video_clip.subclipped(start_time, end_time)
-
-                # 为每个视频片段生成唯一文件名，输出到指定目录
-                output_segment_path = f"{output_path}/segment_{i + 1}.mp4"
-                logger.info(
-                    f"正在导出场景 {i + 1}/{len(scenes)}",
-                    {
-                        "start_time": format_time(start, video_clip.fps),
-                        "end_time": format_time(end, video_clip.fps),
-                    },
-                )
-
                 try:
-                    # 获取原视频的编码参数
-                    original_bitrate = (
-                        str(int(video_clip.reader.bitrate)) + "k"
-                        if hasattr(video_clip.reader, "bitrate")
-                        else "8000k"
-                    )
-                    # 获取CPU核心数并设置合适的线程数（保留1-2个核心给系统）
-                    cpu_count = os.cpu_count() or 4
-                    thread_count = max(1, cpu_count - 2)
+                    start_time = start / video_clip.fps
+                    end_time = end / video_clip.fps
+                    segment_clip = video_clip.subclipped(start_time, end_time)
+                    if not segment_clip or not segment_clip.reader:
+                        raise ValueError(f"无法创建视频片段 {i + 1}")
 
-                    # 输出每个视频片段，使用原视频参数
-                    segment_clip.write_videofile(
-                        output_segment_path,
-                        codec="libx264",  # 使用 libx264 编码器代替 h264_nvenc
-                        fps=video_clip.fps,
-                        bitrate=original_bitrate,  # 使用原视频码率
-                        preset="medium",  # 使用平衡的预设
-                        threads=thread_count,  # 动态设置线程数
+                    # 为每个视频片段生成唯一文件名，输出到指定目录
+                    output_segment_path = f"{output_path}/segment_{i + 1}.mp4"
+                    logger.info(
+                        f"正在导出场景 {i + 1}/{len(scenes)}",
+                        {
+                            "start_time": format_time(start, video_clip.fps),
+                            "end_time": format_time(end, video_clip.fps),
+                        },
                     )
-                finally:
-                    # 确保segment_clip被正确关闭
-                    segment_clip.close()
 
-                formatted_scenes.append(
-                    {
-                        "start_time": format_time(start, video_clip.fps),
-                        "end_time": format_time(end, video_clip.fps),
-                    }
-                )
+                    try:
+                        # 获取原视频的编码参数
+                        original_bitrate = (
+                            str(int(video_clip.reader.bitrate)) + "k"
+                            if hasattr(video_clip.reader, "bitrate")
+                            else "8000k"
+                        )
+                        # 获取CPU核心数并设置合适的线程数（保留1-2个核心给系统）
+                        cpu_count = os.cpu_count() or 4
+                        thread_count = max(1, cpu_count - 2)
+
+                        # 输出每个视频片段，使用原视频参数
+                        segment_clip.write_videofile(
+                            output_segment_path,
+                            codec="libx264",  # 使用 libx264 编码器代替 h264_nvenc
+                            fps=video_clip.fps,
+                            bitrate=original_bitrate,  # 使用原视频码率
+                            preset="medium",  # 使用平衡的预设
+                            threads=thread_count,  # 动态设置线程数
+                            audio=True,  # 确保包含音频
+                            logger=None,  # 禁用moviepy的内部logger
+                        )
+                    except Exception as e:
+                        logger.error(f"导出视频片段 {i + 1} 失败: {str(e)}")
+                        raise
+                    finally:
+                        # 确保segment_clip被正确关闭
+                        if segment_clip:
+                            segment_clip.close()
+
+                    formatted_scenes.append(
+                        {
+                            "start_time": format_time(start, video_clip.fps),
+                            "end_time": format_time(end, video_clip.fps),
+                        }
+                    )
+                except Exception as e:
+                    logger.error(f"处理视频片段 {i + 1} 失败: {str(e)}")
+                    raise
 
             # 如果需要可视化，生成预测结果的可视化图像
             if visualize:

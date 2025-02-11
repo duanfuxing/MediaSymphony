@@ -118,6 +118,8 @@ def main():
                 bitrate=original_bitrate,  # 使用原视频码率
                 preset="medium",  # 使用平衡的预设
                 threads=thread_count,  # 动态设置线程数
+                audio=True,  # 确保包含音频
+                logger=None,  # 禁用moviepy的内部logger
             )
 
         # 如果需要可视化，生成预测结果的可视化图像
