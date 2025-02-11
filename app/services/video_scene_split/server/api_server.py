@@ -218,8 +218,8 @@ def process_video_segments(video_clip, scenes, output_path):
             # 添加场景信息
             formatted_scenes.append(
                 {
-                    "start_frame": start,
-                    "end_frame": end,
+                    "start_frame": int(start),
+                    "end_frame": int(end),
                     "start_time": format_time(start, video_clip.fps),
                     "end_time": format_time(end, video_clip.fps),
                 }
