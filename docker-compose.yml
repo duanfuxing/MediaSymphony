@@ -60,7 +60,7 @@ services:
 
   # 音频分离服务
   audio_separation:
-    image: catchoco/as:gpu-v1.0
+    image: catchoco/as:latest
     container_name: audio_separation
     runtime: nvidia
     deploy:
@@ -85,7 +85,7 @@ services:
 
   # 音频转写服务
   audio_transcription:
-    image: catchoco/sense-voice:v1.0
+    image: catchoco/sense-voice:latest
     container_name: audio_transcription
     runtime: nvidia
     deploy:

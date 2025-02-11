@@ -29,4 +29,4 @@ jobs:
           context: app/services/audio_transcription  # 设置构建上下文为Dockerfile所在目录
           file: app/services/audio_transcription/Dockerfile-sense-voice  # 指定Dockerfile路径
           push: true
-          tags: catchoco/sense-voice:v1.0
+          tags: catchoco/sense-voice:latest
