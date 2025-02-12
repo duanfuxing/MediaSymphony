@@ -1,8 +1,7 @@
-from celery import shared_task
-from app.routers.video_tasks import TaskStatus, tasks_db, AudioMode
-from app.services.video_scene_split.server.api_server import SceneDetector
-from app.services.audio_separation.routes import separate_audio
-from app.services.audio_transcription.routes import transcribe_audio
+import aiohttp
+from celery import Task
+from app.celery_app import celery_app
+from app.models.task_models import TaskStatus, AudioMode
 from app.config import settings
 from app.utils.logger import Logger
 import os
@@ -12,6 +11,19 @@ from datetime import datetime
 import json
 
 logger = Logger("celery_tasks")
+
+class AsyncTask(Task):
+    """支持异步操作的 Celery Task"""
+    def __call__(self, *args, **kwargs):
+        return self.run(*args, **kwargs)
+
+    def run(self, *args, **kwargs):
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(self._run_async(*args, **kwargs))
+
+    async def _run_async(self, *args, **kwargs):
+        raise NotImplementedError()
+
 
 
 def get_file_extension(url: str, content_type: str) -> str:
@@ -149,35 +161,54 @@ async def handle_scene_detection(
             "开始场景分割", {"task_id": task_id, "audio_mode": video_split_audio_mode}
         )
         await update_task_step(task_id, "scene_cut", "processing")
-        detector = SceneDetector(port=settings.SCENE_DETECTION_API_PORT)
-
+        
         scenes = []
-        if video_split_audio_mode in [AudioMode.BOTH, AudioMode.UNMUTE]:
-            unmute_scenes = await asyncio.wait_for(
-                detector.process_video(
-                    video_path, output_path, audio_mode=AudioMode.UNMUTE
-                ),
-                timeout=settings.SCENE_DETECTION_TIMEOUT,
-            )
-            scenes.extend(unmute_scenes)
-            logger.info(
-                "有声场景分割完成",
-                {"task_id": task_id, "scenes_count": len(unmute_scenes)},
-            )
+        api_url = f"http://localhost:{settings.SCENE_DETECTION_API_PORT}/api/v1/scene-detection/process"
+        
+        async with aiohttp.ClientSession() as session:
+            if video_split_audio_mode in [AudioMode.BOTH, AudioMode.UNMUTE]:
+                # 处理有声场景
+                payload = {
+                    "input_path": video_path,
+                    "output_path": output_path,
+                    "task_id": task_id,
+                    "video_split_audio_mode": AudioMode.UNMUTE
+                }
+                
+                async with session.post(api_url, json=payload) as response:
+                    if response.status == 200:
+                        unmute_scenes = await response.json()
+                        scenes.extend(unmute_scenes)
+                        logger.info(
+                            "有声场景分割完成",
+                            {"task_id": task_id, "scenes_count": len(unmute_scenes)},
+                        )
+                    else:
+                        error_msg = await response.text()
+                        raise Exception(f"有声场景分割API请求失败: {error_msg}")
 
-        if video_split_audio_mode in [AudioMode.BOTH, AudioMode.MUTE]:
-            mute_scenes = await asyncio.wait_for(
-                detector.process_video(
-                    video_path, output_path, audio_mode=AudioMode.MUTE
-                ),
-                timeout=settings.SCENE_DETECTION_TIMEOUT,
-            )
-            scenes.extend(mute_scenes)
-            logger.info(
-                "静音场景分割完成",
-                {"task_id": task_id, "scenes_count": len(mute_scenes)},
-            )
+            if video_split_audio_mode in [AudioMode.BOTH, AudioMode.MUTE]:
+                # 处理静音场景
+                payload = {
+                    "input_path": video_path,
+                    "output_path": output_path,
+                    "task_id": task_id,
+                    "video_split_audio_mode": AudioMode.MUTE
+                }
+                
+                async with session.post(api_url, json=payload) as response:
+                    if response.status == 200:
+                        mute_scenes = await response.json()
+                        scenes.extend(mute_scenes)
+                        logger.info(
+                            "静音场景分割完成",
+                            {"task_id": task_id, "scenes_count": len(mute_scenes)},
+                        )
+                    else:
+                        error_msg = await response.text()
+                        raise Exception(f"静音场景分割API请求失败: {error_msg}")
 
+        # 按开始帧排序
         scenes.sort(key=lambda x: x.get("start_frame", 0))
         await update_task_step(task_id, "scene_cut", "success", json.dumps(scenes))
         logger.info(
@@ -211,13 +242,36 @@ async def handle_audio_separation(
     try:
         logger.info("开始音频分离", {"task_id": task_id})
         await update_task_step(task_id, "audio_extract", "processing")
-        audio_path = await asyncio.wait_for(
-            separate_audio(video_path, output_path),
-            timeout=settings.AUDIO_SEPARATION_TIMEOUT,
-        )
-        await update_task_step(task_id, "audio_extract", "success", audio_path)
-        logger.info("音频分离完成", {"task_id": task_id, "audio_path": audio_path})
-        return audio_path
+        
+        api_url = f"http://localhost:{settings.AUDIO_SEPARATION_API_PORT}/api/v1/audio-transcription/process"
+        
+        payload = {
+            "audio_path": video_path,
+            "model": "11",  # 使用默认模型
+            "task_id": task_id,
+            "output_path": output_path
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(api_url, json=payload) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    audio_path = result.get("audio_path")  # 假设API返回包含audio_path字段
+                    if not audio_path:
+                        raise Exception("API返回结果中未找到audio_path")
+                        
+                    await update_task_step(task_id, "audio_extract", "success", audio_path)
+                    logger.info("音频分离完成", {"task_id": task_id, "audio_path": audio_path})
+                    return audio_path
+                else:
+                    error_msg = await response.text()
+                    raise Exception(f"音频分离API请求失败: {error_msg}")
+
+    except asyncio.TimeoutError:
+        error_msg = "音频分离请求超时"
+        await update_task_step(task_id, "audio_extract", "failed", error=error_msg)
+        logger.error("音频分离超时", {"task_id": task_id, "error": error_msg})
+        raise
 
     except Exception as e:
         error_msg = str(e)
@@ -245,20 +299,38 @@ async def handle_audio_transcription(
     try:
         logger.info("开始语音转写", {"task_id": task_id})
         await update_task_step(task_id, "text_convert", "processing")
-        transcription = await asyncio.wait_for(
-            transcribe_audio(video_path, output_path),
-            timeout=settings.AUDIO_TRANSCRIPTION_TIMEOUT,
-        )
-        await update_task_step(task_id, "text_convert", "success", transcription)
-        logger.info("语音转写完成", {"task_id": task_id})
-        return transcription
+        
+        api_url = f"http://localhost:{settings.AUDIO_TRANSCRIPTION_API_PORT}/api/v1/audio-transcription/process"
+        
+        payload = {
+            "audio_path": video_path,
+            "output_path": output_path,
+            "task_id": task_id
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(api_url, json=payload) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    transcription = result.get("transcription", "")  # 获取转写结果
+                    
+                    await update_task_step(task_id, "text_convert", "success", transcription)
+                    logger.info("语音转写完成", {"task_id": task_id})
+                    return transcription
+                else:
+                    error_msg = await response.text()
+                    raise Exception(f"语音转写API请求失败: {error_msg}")
+
+    except asyncio.TimeoutError:
+        error_msg = "语音转写请求超时"
+        await update_task_step(task_id, "text_convert", "failed", error=error_msg)
+        logger.error("语音转写超时", {"task_id": task_id, "error": error_msg})
+        raise
 
     except Exception as e:
         error_msg = str(e)
         await update_task_step(task_id, "text_convert", "failed", error=error_msg)
-        logger.error("语音转写失败", {"task_id": task_id, "error": error_msg})
-        raise
-
+        logger.error
 
 async def cleanup_temp_files(task_id: str, video_path: str, audio_path: str):
     """清理临时文件
@@ -395,7 +467,7 @@ async def upload_scene_files(
         raise
 
 
-@shared_task(bind=True, name="app.tasks.process_video")
+@celery_app.task(bind=True, base=AsyncTask)
 async def process_video(
     self,
     task_id: str,
