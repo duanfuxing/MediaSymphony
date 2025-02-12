@@ -17,9 +17,9 @@ class Settings(BaseSettings):
     APP_PORT: int  # 应用端口
 
     # API服务端口配置
-    SCENE_DETECTION_API_PORT: int = 5001  # 场景分割服务端口
-    AUDIO_SEPARATION_API_PORT: int = 5002  # 音频分离服务端口
-    AUDIO_TRANSCRIPTION_API_PORT: int = 5003  # 语音转写服务端口
+    SCENE_DETECTION_API_PORT: int = 5000  # 场景分割服务端口
+    AUDIO_SEPARATION_API_PORT: int = 5001  # 音频分离服务端口
+    AUDIO_TRANSCRIPTION_API_PORT: int = 5002  # 语音转写服务端口
 
     # API超时配置（单位：秒）
     SCENE_DETECTION_TIMEOUT: int = 1800  # 场景分割超时时间
