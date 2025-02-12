@@ -237,7 +237,7 @@ async def handle_scene_detection(
                     "task_id": task_id,
                     "video_split_audio_mode": AudioMode.UNMUTE
                 }
-                
+                logger.info(f"scene-palyload{payload}")
                 async with session.post(api_url, json=payload) as response:
                     logger.info(f"xxx{response}")
                     if response.status == 200:

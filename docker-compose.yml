@@ -52,7 +52,7 @@ services:
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     volumes:
       - ./app/services/video_scene_split:/app
-      - ./data:/data
+      - /data:/data
     ports:
       - "5000:5000"
     restart: unless-stopped
@@ -79,7 +79,7 @@ services:
       - "5001:5001"
     volumes:
       - ./app/services/audio_separation:/app
-      - ./data:/data
+      - /data:/data
     networks:
       - media_symphony_net
     restart: unless-stopped
@@ -104,7 +104,7 @@ services:
       - "5002:5002"
     volumes:
       - ./app/services/audio_transcription:/app
-      - ./data:/data
+      - /data:/data
     networks:
       - media_symphony_net
     restart: unless-stopped
