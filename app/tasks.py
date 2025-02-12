@@ -173,22 +173,64 @@ async def prepare_directories(task_id: str) -> tuple[str, str]:
             })
             raise
 
+        # 分别处理保存静音视频目录
+        try:
+            mute_video_path = os.path.join(output_path, "mute")
+            if not os.path.exists(mute_video_path):
+                os.makedirs(mute_video_path, mode=0o755, exist_ok=True)
+                if not os.path.exists(mute_video_path):
+                    raise Exception(f"静音视频目录创建失败，路径: {mute_video_path}")
+                logger.info(f"创建静音视频目录成功: {mute_video_path}")
+        except Exception as e:
+            logger.error(f"创建静音视频目录失败: {str(e)}", {
+                "task_id": task_id,
+                "output_path": mute_video_path,
+                "error": str(e)
+            })
+            raise
+
+        # 分别处理保存非静音视频目录
+        try:
+            un_mute_video_path = os.path.join(output_path, "un_mute")
+            if not os.path.exists(un_mute_video_path):
+                os.makedirs(un_mute_video_path, mode=0o755, exist_ok=True)
+                if not os.path.exists(un_mute_video_path):
+                    raise Exception(f"非静音视频目录创建失败，路径: {un_mute_video_path}")
+                logger.info(f"创建非静音视频目录成功: {un_mute_video_path}")
+        except Exception as e:
+            logger.error(f"创建非静音视频目录失败: {str(e)}", {
+                "task_id": task_id,
+                "output_path": un_mute_video_path,
+                "error": str(e)
+            })
+            raise
+
         # 最终验证
         if not os.path.exists(upload_dir):
             raise Exception(f"上传目录不存在: {upload_dir}")
         if not os.path.exists(output_path):
             raise Exception(f"输出目录不存在: {output_path}")
+        if not os.path.exists(mute_video_path):
+            raise Exception(f"静音视频目录不存在: {mute_video_path}")
+        if not os.path.exists(un_mute_video_path):
+            raise Exception(f"非静音视频目录不存在: {un_mute_video_path}")
 
         # 检查目录权限
         if not os.access(upload_dir, os.W_OK):
             raise Exception(f"上传目录没有写入权限: {upload_dir}")
         if not os.access(output_path, os.W_OK):
             raise Exception(f"输出目录没有写入权限: {output_path}")
+        if not os.access(mute_video_path, os.W_OK):
+            raise Exception(f"静音视频目录没有写入权限: {mute_video_path}")
+        if not os.access(un_mute_video_path, os.W_OK):
+            raise Exception(f"非静音视频目录没有写入权限: {un_mute_video_path}")
 
         logger.info("目录创建完成", {
             "task_id": task_id,
             "upload_dir": upload_dir,
-            "output_path": output_path
+            "output_path": output_path,
+            "mute_video_path":mute_video_path,
+            "un_mute_video_path":un_mute_video_path
         })
 
         return upload_dir, output_path
@@ -198,7 +240,9 @@ async def prepare_directories(task_id: str) -> tuple[str, str]:
         logger.error(error_msg, {
             "task_id": task_id,
             "upload_dir": upload_dir if 'upload_dir' in locals() else None,
-            "output_path": output_path if 'output_path' in locals() else None
+            "output_path": output_path if 'output_path' in locals() else None,
+            "mute_video_path": mute_video_path if 'mute_video_path' in locals() else None,
+            "un_mute_video_path": un_mute_video_path if 'un_mute_video_path' in locals() else None,
         })
         raise Exception(error_msg)
 
@@ -233,7 +277,7 @@ async def handle_scene_detection(
             if video_split_audio_mode in [AudioMode.BOTH, AudioMode.UNMUTE]:
                 payload = {
                     "input_path": video_path,
-                    "output_path": output_path,
+                    "output_path": os.path.join(output_path, "un_mute"),
                     "task_id": task_id,
                     "video_split_audio_mode": AudioMode.UNMUTE
                 }
@@ -258,7 +302,7 @@ async def handle_scene_detection(
             if video_split_audio_mode in [AudioMode.BOTH, AudioMode.MUTE]:
                 payload = {
                     "input_path": video_path,
-                    "output_path": output_path,
+                    "output_path": os.path.join(output_path, "mute"),
                     "task_id": task_id,
                     "video_split_audio_mode": AudioMode.MUTE
                 }
@@ -390,6 +434,7 @@ async def handle_audio_transcription(
             async with session.post(api_url, json=payload) as response:
                 if response.status == 200:
                     result = await response.json()
+                    logger.info(f"语音转写结果{result}")
                     transcription = result.get("transcription", "")  # 获取转写结果
                     
                     await update_task_step(task_id, "text_convert", "success", transcription)
@@ -447,12 +492,18 @@ async def upload_audio_file(
     """
     try:
         tos_client = TOSClient()
-        audio_object_key = f"{base_path}/audio.mp3"
+        # 获取源文件扩展名
+        ext = os.path.splitext(audio_path)[1]  # 包含 `.` 例如 `.mp3`
+        # 生成 object_key
+        audio_object_key = f"{base_path}/audio{ext}"
+
         tos_client.upload_file(
             local_file_path=audio_path,
             object_key=audio_object_key,
             metadata={"uid": uid, "task_id": task_id},
         )
+        await update_task_step(task_id, "audio_object_key", "success", audio_object_key)
+
         return audio_object_key
     except Exception as e:
         logger.error("音频文件上传失败", {"task_id": task_id, "error": str(e)})
@@ -490,6 +541,7 @@ async def upload_transcription_file(
             object_key=transcription_object_key,
             metadata={"uid": uid, "task_id": task_id},
         )
+        await update_task_step(task_id, "transcription_object_key", "success", transcription_object_key)
         return transcription_object_key
     except Exception as e:
         logger.error("转写文件上传失败", {"task_id": task_id, "error": str(e)})
@@ -591,9 +643,11 @@ def process_video(self, task_id: str, video_url: str, uid: str, video_split_audi
             scenes = await handle_scene_detection(
                 task_id, video_path, output_path, video_split_audio_mode
             )
+            # 减少测试的速度
+            # scenes = []
             audio_path = await handle_audio_separation(task_id, video_path, output_path)
             transcription = await handle_audio_transcription(
-                task_id, video_path, output_path
+                task_id, audio_path, output_path
             )
 
             # 5. 上传结果到对象存储
