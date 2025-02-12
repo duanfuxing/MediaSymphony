@@ -8,12 +8,13 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Shanghai
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./app/services/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
-      - ./data/mysql:/var/lib/mysql-files
+      - ./data/mysql:/var/lib/mysql
     restart: unless-stopped
     networks:
       - media_symphony_net
