@@ -25,6 +25,8 @@ from moviepy import VideoFileClip
 import threading
 from functools import partial
 import time
+import traceback
+import sys
 
 app = Flask(__name__)
 logger = Logger("scene_detection_api")
@@ -296,15 +298,23 @@ def process_scene_detection():
     try:
         # 解析和验证请求数据
         data = request.get_json()
-        (
-            input_path,
-            output_path,
-            task_id,
-            threshold,
-            visualize,
-            video_split_audio_mode,
-        ) = validate_request_data(data)
-
+        if not data:
+            return jsonify({
+                "status": "error",
+                "message": "无效的请求数据"
+            }), 400
+        try:
+             # 验证请求数据
+            input_path, output_path, task_id, threshold, visualize, video_split_audio_mode = (
+                validate_request_data(data)
+            )
+        except ValueError as ve:
+            return jsonify({
+                "status": "error",
+                "message": str(ve),
+                "task_id": task_id
+            }), 400
+        
         logger.info(
             "开始处理视频场景分割",
             {
@@ -425,6 +435,21 @@ def process_scene_detection():
             500,
         )
 
+# 添加全局错误处理
+@app.errorhandler(Exception)
+def handle_error(error):
+    """处理所有未捕获的异常"""
+    error_trace = traceback.format_exc()
+    logger.error(f"未捕获的异常: {str(error)}\n{error_trace}")
+    return jsonify({
+        "status": "error",
+        "message": "服务器内部错误",
+        "error_type": type(error).__name__
+    }), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    try:
+        app.run(host="0.0.0.0", port=5000)
+    except Exception as e:
+        logger.error(f"服务器启动失败: {str(e)}")
+        sys.exit(1)

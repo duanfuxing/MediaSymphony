@@ -239,6 +239,7 @@ async def handle_scene_detection(
                 }
                 
                 async with session.post(api_url, json=payload) as response:
+                    logger.info(f"xxx{response}")
                     if response.status == 200:
                         response_data = await response.json()
                         if response_data.get("status") == "success" and isinstance(response_data.get("data"), list):
