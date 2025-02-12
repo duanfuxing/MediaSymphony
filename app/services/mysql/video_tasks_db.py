@@ -3,6 +3,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 from app.config import settings
 from app.utils.logger import Logger
+import json
 
 logger = Logger("video_tasks_db")
 

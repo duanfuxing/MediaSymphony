@@ -1,3 +1,4 @@
+from app.utils.celery_check import check_celery_connection
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from pydantic import BaseModel, constr, validator
 from typing import Optional, Dict, Any
@@ -10,6 +11,8 @@ import aiofiles
 import shutil
 import json
 import re
+import traceback
+import sys
 
 from app.config import settings
 from app.utils.logger import Logger
@@ -152,6 +155,15 @@ async def create_task(request: CreateTaskRequest):
     Raises:
         HTTPException: 当任务创建失败时抛出相应的错误
     """
+
+    # 首先检查连接
+    if not check_celery_connection():
+        raise HTTPException(
+            status_code=503,
+            detail="任务处理服务暂时不可用，请稍后重试"
+        )
+
+
     # 创建taskid
     task_id = str(uuid.uuid4())
     logger.log_request(
@@ -171,8 +183,13 @@ async def create_task(request: CreateTaskRequest):
 
         # 创建任务记录
         if not tasks_db.create_task(task_id, request.video_url, request.uid):
+            logger.error("创建任务失败", {"task_id": task_id})
+            # 更新任务状态为失败
+            tasks_db.update_task_status(task_id, TaskStatus.FAILED, "任务创建失败")
             raise HTTPException(status_code=500, detail="任务创建失败, 请稍后重试")
+
         logger.log_task_status(task_id, TaskStatus.PENDING)
+
 
         # 构建返回数据
         task = {
@@ -192,14 +209,39 @@ async def create_task(request: CreateTaskRequest):
         logger.log_response(200, "/api/v1/video-tasks/create", {"task_id": task_id})
         return TaskResponse(**task)
 
+    except HTTPException as he:
+        # 处理 HTTP 异常
+        if task_id:
+            tasks_db.update_task_status(task_id, TaskStatus.FAILED, str(he.detail))
+            logger.log_task_status(task_id, TaskStatus.FAILED)
+        logger.error("HTTP异常", {"task_id": task_id, "error": str(he.detail)})
+        raise
+
     except Exception as e:
-        # 更新任务状态为失败
+        # 获取异常的详细信息
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        # 获取堆栈跟踪信息
+        stack_trace = traceback.extract_tb(exc_traceback)
+        # 获取最后一个堆栈帧（异常发生的位置）
+        last_frame = stack_trace[-1]
+        error_location = f"{last_frame.filename}:{last_frame.lineno}"
+
+        error_detail = {
+            "task_id": task_id,
+            "error_type": exc_type.__name__,
+            "error_message": str(e),
+            "error_location": error_location,
+            "stack_trace": traceback.format_exc()
+        }
+        # 处理其他异常
         if task_id:
             tasks_db.update_task_status(task_id, TaskStatus.FAILED, str(e))
             logger.log_task_status(task_id, TaskStatus.FAILED)
-
-        logger.error("创建任务失败", {"task_id": task_id, "error": str(e)})
-        raise
+        logger.error("创建任务失败", {"task_id": task_id, "error": error_detail})
+        raise HTTPException(
+            status_code=500,
+            detail=f"服务器内部错误 (位置: {error_location})"
+        )
 
 
 @router.get("/get/{task_id}", response_model=TaskResponse)

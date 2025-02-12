@@ -62,7 +62,7 @@ MediaSymphony是一个强大的媒体处理平台，提供视频场景分割、�
 ### 主服务API
 #### 创建视频处理任务
 ```http
-POST /api/v1/video-tasks/video-handle/create
+POST /api/v1/video-tasks/create
 
 请求体：
 {
@@ -84,7 +84,7 @@ POST /api/v1/video-tasks/video-handle/create
 
 #### 上传视频文件
 ```http
-POST /api/v1/video-tasks/video-handle/upload
+POST /api/v1/video-tasks/upload
 
 请求体：
 - multipart/form-data
@@ -105,7 +105,7 @@ POST /api/v1/video-tasks/video-handle/upload
 
 #### 获取任务状态
 ```http
-GET /api/v1/video-tasks/video-handle/get/{task_id}
+GET /api/v1/video-tasks/get/{task_id}
 
 响应：
 {

@@ -1,7 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from app.config import settings
 from app.routers import video_tasks
+from app.utils.logger import Logger
+import traceback
+from typing import Any
+
+logger = Logger("video_tasks")
 
 # 创建FastAPI应用实例
 app = FastAPI(
@@ -22,11 +29,139 @@ app.add_middleware(
 # 注册路由
 # 将视频处理任务相关的路由注册到应用
 app.include_router(
-    video_tasks.router,
+    video_tasks.router, 
     prefix=f"{settings.API_V1_STR}/video-tasks",  # 设置路由前缀
     tags=["视频处理任务"],  # 设置API文档标签
 )
 
+# 参数验证异常处理
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    try:
+        error_fields = []
+        for error in exc.errors():
+            if error["type"] == "missing":
+                field = error["loc"][-1]
+                error_fields.append(field)
+        
+        error_message = f"缺少必填参数: {', '.join(error_fields)}" if error_fields else "参数验证错误"
+        
+        # 记录请求信息和错误
+        logger.error(
+            f"参数验证错误 - 路径: {request.url.path} - 错误: {error_message}"
+        )
+        
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "error": error_message
+            }
+        )
+    except Exception as e:
+        logger.error(f"处理参数验证异常时出错: {str(e)}\n{traceback.format_exc()}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "error": "服务错误"
+            }
+        )
+    
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    try:
+        logger.warning(
+            f"HTTP异常 - 路径: {request.url.path}\n"
+            f"状态码: {exc.status_code}\n"
+            f"详情: {exc.detail}"
+        )
+        
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "status": "error",
+                "error": exc.detail
+            }
+        )
+    except Exception as e:
+        logger.error(f"处理HTTP异常时出错: {str(e)}\n{traceback.format_exc()}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "error": "服务错误"
+            }
+        )
+
+# 全局异常处理
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    try:
+        error_msg = "服务错误"
+        status_code = 500
+        
+        # 处理 HTTPException
+        if isinstance(exc, HTTPException):
+            error_msg = exc.detail
+            status_code = exc.status_code
+        # 处理其他异常类型
+        elif isinstance(exc, ValueError):
+            error_msg = "参数值错误"
+            status_code = 400
+        elif isinstance(exc, FileNotFoundError):
+            error_msg = "文件未找到"
+            status_code = 404
+        
+        # 记录日志
+        logger.error(
+            f"请求异常 - 路径: {request.url.path}\n"
+            f"异常类型: {type(exc).__name__}\n"
+            f"异常信息: {str(exc)}\n"
+            f"堆栈跟踪:\n{traceback.format_exc()}"
+        )
+        
+        return JSONResponse(
+            status_code=status_code,
+            content={
+                "status": "error",
+                "error": error_msg
+            }
+        )
+    except Exception as e:
+        logger.critical(
+            f"全局异常处理器发生错误: {str(e)}\n{traceback.format_exc()}"
+        )
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "error": "服务错误"
+            }
+        )
+
+# 包装路由处理函数，添加异常保护
+def safe_endpoint(func: Any):
+    async def wrapper(*args, **kwargs):
+        try:
+            return await func(*args, **kwargs)
+        except Exception as e:
+            logger.error(f"路由处理发生异常: {str(e)}\n{traceback.format_exc()}")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "status": "error",
+                    "error": "服务错误"
+                }
+            )
+    return wrapper
+
+# 对于所有的路由处理函数，建议都添加 @safe_endpoint 装饰器：
+# @app.post("/some-endpoint")
+# @safe_endpoint
+# async def some_endpoint():
+#     # 你的代码
+#     pass
 
 # 根路由
 @app.get("/")

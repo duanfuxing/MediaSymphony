@@ -38,7 +38,7 @@ def validate_output_directory(output_path: str) -> bool:
     except Exception:
         return False
 
-@router.post("/api/v1/audio-transcription/process", response_model=SeparationResponse)
+@router.post("/api/v1/audio-separation/process", response_model=SeparationResponse)
 async def separate_audio(request: AudioSeparationRequest):
     request_id = uuid.uuid4().hex
     start_time = time.time()

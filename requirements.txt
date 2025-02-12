@@ -8,3 +8,9 @@ tos
 sqlalchemy
 pymysql
 opencv-python
+celery
+flask
+aiohttp
+redis
+celery[redis]
+aiofiles
