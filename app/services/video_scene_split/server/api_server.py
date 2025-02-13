@@ -279,6 +279,8 @@ def process_video_segments(
                     "end_frame": int(end),
                     "start_time": format_time(start, video_clip.fps),
                     "end_time": format_time(end, video_clip.fps),
+                    "output_path": output_segment_path,
+                    "is_mute": video_split_audio_mode == AudioMode.MUTE
                 }
             )
         except Exception as e:
