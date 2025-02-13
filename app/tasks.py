@@ -582,15 +582,16 @@ async def upload_scene_files(
             scene_path = scene.get("output_path")
 
             if scene_path and os.path.exists(scene_path):
-                scene_object_key = f"{base_path}/{scene_type}/{i}.mp4"
+                # 从 1 开始计数
+                scene_object_key = f"{base_path}/{scene_type}/{i + 1}.mp4"
                 tos_client.upload_file(
                     local_file_path=scene_path,
                     object_key=scene_object_key,
-                    metadata={"uid": uid, "task_id": task_id, "scene_index": i},
+                    metadata={"uid": uid, "task_id": task_id, "scene_index": i + 1}, # 元数据中的索引也更新
                 )
                 scene_files.append(
                     {
-                        "index": i,
+                        "index": i + 1, # 更新索引从1开始
                         "type": scene_type,
                         "object_key": scene_object_key,
                         "start_frame": scene.get("start_frame"),
