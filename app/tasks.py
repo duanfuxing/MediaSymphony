@@ -673,7 +673,17 @@ def process_video(self, task_id: str, video_url: str, uid: str, video_split_audi
                 transcription, output_path, audio_base_path, uid, task_id
             )
             # 5-3. 上传场景切割文件
-            scene_files = await upload_scene_files(scenes, base_path, uid, task_id)
+            # 根据 is_mute 拆分场景文件
+            mute_scenes = [scene for scene in scenes if scene.get('is_mute')]
+            un_mute_scenes = [scene for scene in scenes if not scene.get('is_mute')]
+            # 分别上传两种场景文件
+            mute_scene_files = await upload_scene_files(mute_scenes, base_path, uid, task_id)
+            un_mute_scene_files = await upload_scene_files(un_mute_scenes, base_path, uid, task_id)
+            # 将视频片段的 tos 地址保存到数据库中
+            await update_task_step(task_id, "mute_scene_files", "success", mute_scene_files)
+            await update_task_step(task_id, "un_mute_scene_files", "success", un_mute_scene_files)
+            # 合并结果用户记录
+            scene_files = mute_scene_files + un_mute_scene_files
 
             # 5. 处理结果
             result = {
