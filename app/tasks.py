@@ -288,6 +288,7 @@ async def handle_scene_detection(
                         response_data = await response.json()
                         if response_data.get("status") == "success" and isinstance(response_data.get("data"), list):
                             unmute_scenes = response_data["data"]
+                            logger.info(f"unmute-scenes{unmute_scenes}")
                             scenes.extend(unmute_scenes)
                             logger.info(
                                 "有声场景分割完成",
@@ -312,7 +313,14 @@ async def handle_scene_detection(
                         response_data = await response.json()
                         if response_data.get("status") == "success" and isinstance(response_data.get("data"), list):
                             mute_scenes = response_data["data"]
+                            logger.info(f"mute-scenes{mute_scenes}")
                             scenes.extend(mute_scenes)
+                            # 静音场景分割完成后 保存一份视频帧列表即可
+                            # 按开始帧排序
+                            mute_scenes.sort(key=lambda x: x["start_frame"])
+                            # 更新数据库记录
+                            # await update_task_step(task_id, "scene_cut", "success", json.dumps(mute_scenes))
+                            await update_task_step(task_id, "scene_cut", "success", mute_scenes)
                             logger.info(
                                 "静音场景分割完成",
                                 {"task_id": task_id, "scenes_count": len(mute_scenes)},
@@ -325,8 +333,8 @@ async def handle_scene_detection(
 
         # 按开始帧排序
         scenes.sort(key=lambda x: x["start_frame"])
-        
-        await update_task_step(task_id, "scene_cut", "success", json.dumps(scenes))
+        # 禁用记录全部视频帧列表(包含静音和非静音)
+        # await update_task_step(task_id, "scene_cut", "success", json.dumps(scenes))
         logger.info(
             "场景分割全部完成", {"task_id": task_id, "total_scenes_count": len(scenes)}
         )
@@ -664,7 +672,6 @@ def process_video(self, task_id: str, video_url: str, uid: str, video_split_audi
             transcription_object_key = await upload_transcription_file(
                 transcription, output_path, audio_base_path, uid, task_id
             )
-            logger.info(f"scenes-list{scenes}")
             # 5-3. 上传场景切割文件
             scene_files = await upload_scene_files(scenes, base_path, uid, task_id)
 
