@@ -655,7 +655,7 @@ def process_video(self, task_id: str, video_url: str, uid: str, video_split_audi
             # 视频文件 tos 地址
             base_path = f"videos/{now.year}/{now.month:02d}/{task_id}"
             # 音频文件 tos 地址
-            audio_base_path = f"videos/{now.year}/{now.month:02d}/{task_id}"
+            audio_base_path = f"audios/{now.year}/{now.month:02d}/{task_id}"
             # 5-1. 上传音频文件
             audio_object_key = await upload_audio_file(audio_path, audio_base_path, uid, task_id)
 
@@ -663,7 +663,7 @@ def process_video(self, task_id: str, video_url: str, uid: str, video_split_audi
             transcription_object_key = await upload_transcription_file(
                 transcription, output_path, base_path, uid, task_id
             )
-
+            logger.info(f"scene_files{scene_files}")
             # 5-3. 上传场景切割文件
             scene_files = await upload_scene_files(scenes, base_path, uid, task_id)
 
