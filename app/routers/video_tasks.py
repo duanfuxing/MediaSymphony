@@ -263,7 +263,7 @@ async def get_task(task_id: str):
         raise HTTPException(status_code=400, detail="无效的任务ID格式")
 
     task = tasks_db.get_task(task_id)
-    formatted_result = format_task_result(task["result"])
+    formatted_result = format_task_result(task)
     if not task:
         raise HTTPException(status_code=404, detail="任务不存在")
     return TaskResponse(**formatted_result)
@@ -336,36 +336,74 @@ async def upload_video(file: UploadFile = File(...), uid: str = None):
         logger.error("上传视频失败", {"task_id": task_id, "error": str(e)})
         raise
 
-def format_task_result(task_data: dict) -> dict:
+def format_task_result(task: dict) -> dict:
     """格式化任务结果数据
 
     Args:
-        task_data: 原始任务数据
+        task: 原始任务数据
 
     Returns:
         dict: 格式化后的数据结构
     """
-    result = {"result": {"video_list": [], "audio_url": "", "audio_text": ""}}
+
+    # 检查 task 是否为字典类型
+    if not isinstance(task, dict):
+        raise HTTPException(
+            status_code=500, 
+            detail=f"任务数据格式错误: 预期 dict 类型，实际为 {type(task)}"
+        )
     
-    # 获取音频文本
-    if "text_convert" in task_data and task_data["text_convert"]["status"] == "success":
-        result["result"]["audio_text"] = task_data["text_convert"]["output"]
+    # 检查 task 是否存在
+    if task is None:
+        raise HTTPException(status_code=404, detail="任务不存在")
     
-    # 获取音频地址
-    if "audio_object_key" in task_data and task_data["audio_object_key"]["status"] == "success":
-        result["result"]["audio_url"] = task_data["audio_object_key"]["output"]
+    # 检查必需字段
+    required_fields = ["task_id", "status", "video_url", "uid", "result"]
+    missing_fields = [field for field in required_fields if field not in task]
+    if missing_fields:
+        raise HTTPException(
+            status_code=500,
+            detail=f"任务数据缺失必需字段: {', '.join(missing_fields)}"
+        )
     
-    # 获取静音和非静音视频
-    mute_videos = {}
-    unmute_videos = {}
+    # 检查 result 字段是否为字典类型
+    if not isinstance(task.get("result"), dict):
+        raise HTTPException(
+            status_code=500,
+            detail="任务结果格式错误: result 字段必须为字典类型"
+        )
+
+    formatted_result = {
+        "task_id": task["task_id"],
+        "status": task["status"],
+        "video_url": task["video_url"],
+        "uid": task["uid"],
+        "result": {
+            "video_list": [],
+            "audio_url": "",
+            "audio_text": ""
+        }
+    }
     
-    if "mute_scene_files" in task_data and task_data["mute_scene_files"]["status"] == "success":
-        for video in task_data["mute_scene_files"]["output"]:
-            mute_videos[video["index"]] = video["object_key"]
-            
-    if "un_mute_scene_files" in task_data and task_data["un_mute_scene_files"]["status"] == "success":
-        for video in task_data["un_mute_scene_files"]["output"]:
-            unmute_videos[video["index"]] = video["object_key"]
+    task_result = task["result"]
+    
+    # 获取音频文本和音频URL
+    if task_result.get("text_convert", {}).get("status") == "success":
+        formatted_result["result"]["audio_text"] = task_result["text_convert"]["output"]
+    
+    if task_result.get("audio_object_key", {}).get("status") == "success":
+        formatted_result["result"]["audio_url"] = task_result["audio_object_key"]["output"]
+    
+    # 获取静音和非静音视频并配对
+    mute_videos = {
+        video["index"]: video["object_key"]
+        for video in task_result.get("mute_scene_files", {}).get("output", [])
+    }
+    
+    unmute_videos = {
+        video["index"]: video["object_key"]
+        for video in task_result.get("un_mute_scene_files", {}).get("output", [])
+    }
     
     # 合并视频列表
     all_indexes = sorted(set(mute_videos.keys()) | set(unmute_videos.keys()))
@@ -374,6 +412,6 @@ def format_task_result(task_data: dict) -> dict:
             "mute_video_url": mute_videos.get(index, ""),
             "un_mute_video_url": unmute_videos.get(index, "")
         }
-        result["result"]["video_list"].append(video_pair)
+        formatted_result["result"]["video_list"].append(video_pair)
     
-    return result
+    return formatted_result
