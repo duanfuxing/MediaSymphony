@@ -1,4 +1,5 @@
 from typing import Optional, Dict, Any
+from fastapi import HTTPException
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 from app.config import settings
@@ -63,7 +64,7 @@ class VideoTasksDB:
                 result = conn.execute(query, {"taskid": task_id}).fetchone()
                 if not result:
                     logger.info(f"任务不存在", {"task_id": task_id})
-                    raise Exception(status_code=404, detail="任务不存在")
+                    raise HTTPException(status_code=404, detail="任务不存在")
                 try:
                     task_progress = json.loads(result.task_progress) if result.task_progress else {}
                 except json.JSONDecodeError as e:
@@ -71,7 +72,7 @@ class VideoTasksDB:
                         "task_id": task_id,
                         "task_progress": result.task_progress
                     })
-                    raise Exception(status_code=404, detail="task_progress JSON解析失败")
+                    raise HTTPException(status_code=404, detail="task_progress JSON解析失败")
                 try:
                     error = json.loads(result.error) if result.error else None
                 except json.JSONDecodeError as e:
@@ -80,7 +81,7 @@ class VideoTasksDB:
                         "error": result.error
                     })
                     error = None
-                    raise Exception(status_code=404, detail="error字段 JSON解析失败")
+                    raise HTTPException(status_code=404, detail="error字段 JSON解析失败")
                 
                 return {
                     "task_id": result.taskid,
@@ -92,13 +93,13 @@ class VideoTasksDB:
                 }
         except SQLAlchemyError as e:
             logger.error(f"获取任务失败: {str(e)}", {"task_id": task_id})
-            raise Exception(status_code=500, detail="获取任务失败")
+            raise HTTPException(status_code=500, detail="获取任务失败")
         except Exception as e:
             logger.error(f"获取任务时发生未预期的错误: {str(e)}", {
                 "task_id": task_id,
                 "error_type": type(e).__name__
             })
-            raise Exception(status_code=500, detail="获取任务时发生未预期的错误")
+            raise HTTPException(status_code=500, detail="获取任务时发生未预期的错误")
 
     def update_task_status(
         self, task_id: str, status: str, error: Optional[str] = None
