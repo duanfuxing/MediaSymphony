@@ -61,20 +61,44 @@ class VideoTasksDB:
                 """
                 )
                 result = conn.execute(query, {"taskid": task_id}).fetchone()
-                if result:
-                    task_progress = json.loads(result.task_progress)
-                    return {
-                        "task_id": result.taskid,
-                        "status": result.status,
-                        "video_url": result.video_url,
-                        "uid": result.uid,
-                        "result": task_progress,
-                        "error": json.loads(result.error) if result.error else None,
-                    }
-                return None
+                if not result:
+                    logger.info(f"任务不存在", {"task_id": task_id})
+                    raise Exception(status_code=404, detail="任务不存在")
+                try:
+                    task_progress = json.loads(result.task_progress) if result.task_progress else {}
+                except json.JSONDecodeError as e:
+                    logger.error(f"task_progress JSON解析失败: {str(e)}", {
+                        "task_id": task_id,
+                        "task_progress": result.task_progress
+                    })
+                    raise Exception(status_code=404, detail="task_progress JSON解析失败")
+                try:
+                    error = json.loads(result.error) if result.error else None
+                except json.JSONDecodeError as e:
+                    logger.error(f"error字段 JSON解析失败: {str(e)}", {
+                        "task_id": task_id,
+                        "error": result.error
+                    })
+                    error = None
+                    raise Exception(status_code=404, detail="error字段 JSON解析失败")
+                
+                return {
+                    "task_id": result.taskid,
+                    "status": result.status,
+                    "video_url": result.video_url,
+                    "uid": result.uid,
+                    "result": task_progress,
+                    "error": error,
+                }
         except SQLAlchemyError as e:
             logger.error(f"获取任务失败: {str(e)}", {"task_id": task_id})
-            return None
+            raise Exception(status_code=500, detail="获取任务失败")
+        except Exception as e:
+            logger.error(f"获取任务时发生未预期的错误: {str(e)}", {
+                "task_id": task_id,
+                "error_type": type(e).__name__
+            })
+            raise Exception(status_code=500, detail="获取任务时发生未预期的错误")
 
     def update_task_status(
         self, task_id: str, status: str, error: Optional[str] = None
