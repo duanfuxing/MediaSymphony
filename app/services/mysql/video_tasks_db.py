@@ -1,20 +1,51 @@
 from typing import Optional, Dict, Any
 from fastapi import HTTPException
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, exc
 from sqlalchemy.exc import SQLAlchemyError
 from app.config import settings
 from app.utils.logger import Logger
 import json
+from functools import wraps
+import time
+
 
 logger = Logger("video_tasks_db")
+
+def retry_on_connection_error(max_retries=3, initial_delay=1):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            delay = initial_delay
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except exc.OperationalError as e:
+                    if "Lost connection" in str(e) and attempt < max_retries - 1:
+                        logger.warning(f"数据库连接丢失，正在重试 ({attempt + 1}/{max_retries})", {
+                            "error": str(e),
+                            "function": func.__name__
+                        })
+                        time.sleep(delay)
+                        delay *= 2  # 指数退避
+                        continue
+                    raise
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 class VideoTasksDB:
     def __init__(self):
-        # 构建数据库连接URL
         db_url = f"mysql+pymysql://{settings.MYSQL_USER}:{settings.MYSQL_PASSWORD}@{settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DATABASE}"
-        self.engine = create_engine(db_url)
-
+        self.engine = create_engine(
+            db_url,
+            pool_pre_ping=True,
+            pool_recycle=1800,  # 30分钟回收连接
+            pool_size=5,
+            max_overflow=10
+        )
+    
+    @retry_on_connection_error()
     def create_task(self, task_id: str, video_url: str, uid: str) -> bool:
         """创建新的视频处理任务
 
@@ -43,6 +74,7 @@ class VideoTasksDB:
             logger.error(f"创建任务失败: {str(e)}", {"task_id": task_id})
             return False
 
+    @retry_on_connection_error()
     def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
         """获取任务信息
 
@@ -100,7 +132,8 @@ class VideoTasksDB:
                 "error_type": type(e).__name__
             })
             raise HTTPException(status_code=500, detail="获取任务时发生未预期的错误")
-
+        
+    @retry_on_connection_error()
     def update_task_status(
         self, task_id: str, status: str, error: Optional[str] = None
     ) -> bool:
@@ -138,6 +171,7 @@ class VideoTasksDB:
             logger.error(f"更新任务状态失败: {str(e)}", {"task_id": task_id})
             return False
 
+    @retry_on_connection_error()
     def update_task_step_and_output(
         self,
         task_id: str,
