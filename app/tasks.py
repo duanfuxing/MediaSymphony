@@ -660,10 +660,11 @@ def process_video(self, task_id: str, video_url: str, uid: str, video_split_audi
             audio_object_key = await upload_audio_file(audio_path, audio_base_path, uid, task_id)
 
             # 5-2. 上传转写文件
+            # 转写文件保存在音频的 tos 目录下
             transcription_object_key = await upload_transcription_file(
-                transcription, output_path, base_path, uid, task_id
+                transcription, output_path, audio_base_path, uid, task_id
             )
-            logger.info(f"scene_files{scene_files}")
+            logger.info(f"scenes-list{scenes}")
             # 5-3. 上传场景切割文件
             scene_files = await upload_scene_files(scenes, base_path, uid, task_id)
 
