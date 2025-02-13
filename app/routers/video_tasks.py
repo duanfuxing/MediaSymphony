@@ -263,9 +263,10 @@ async def get_task(task_id: str):
         raise HTTPException(status_code=400, detail="无效的任务ID格式")
 
     task = tasks_db.get_task(task_id)
+    formatted_result = format_task_result(task["result"])
     if not task:
         raise HTTPException(status_code=404, detail="任务不存在")
-    return TaskResponse(**task)
+    return TaskResponse(**formatted_result)
 
 
 @router.post("/upload_test", response_model=TaskResponse)
@@ -334,3 +335,45 @@ async def upload_video(file: UploadFile = File(...), uid: str = None):
             os.remove(video_path)
         logger.error("上传视频失败", {"task_id": task_id, "error": str(e)})
         raise
+
+def format_task_result(task_data: dict) -> dict:
+    """格式化任务结果数据
+
+    Args:
+        task_data: 原始任务数据
+
+    Returns:
+        dict: 格式化后的数据结构
+    """
+    result = {"result": {"video_list": [], "audio_url": "", "audio_text": ""}}
+    
+    # 获取音频文本
+    if "text_convert" in task_data and task_data["text_convert"]["status"] == "success":
+        result["result"]["audio_text"] = task_data["text_convert"]["output"]
+    
+    # 获取音频地址
+    if "audio_object_key" in task_data and task_data["audio_object_key"]["status"] == "success":
+        result["result"]["audio_url"] = task_data["audio_object_key"]["output"]
+    
+    # 获取静音和非静音视频
+    mute_videos = {}
+    unmute_videos = {}
+    
+    if "mute_scene_files" in task_data and task_data["mute_scene_files"]["status"] == "success":
+        for video in task_data["mute_scene_files"]["output"]:
+            mute_videos[video["index"]] = video["object_key"]
+            
+    if "un_mute_scene_files" in task_data and task_data["un_mute_scene_files"]["status"] == "success":
+        for video in task_data["un_mute_scene_files"]["output"]:
+            unmute_videos[video["index"]] = video["object_key"]
+    
+    # 合并视频列表
+    all_indexes = sorted(set(mute_videos.keys()) | set(unmute_videos.keys()))
+    for index in all_indexes:
+        video_pair = {
+            "mute_video_url": mute_videos.get(index, ""),
+            "un_mute_video_url": unmute_videos.get(index, "")
+        }
+        result["result"]["video_list"].append(video_pair)
+    
+    return result
