@@ -8,8 +8,6 @@ import httpx
 import os
 from datetime import datetime
 import aiofiles
-import shutil
-import json
 import re
 import traceback
 import sys
@@ -32,7 +30,7 @@ class TaskStatus(str, Enum):
 
     用于表示视频处理任务的不同状态
     """
-
+    SUCCESS = "success"
     PENDING = "pending"  # 等待处理
     PROCESSING = "processing"  # 处理中
     COMPLETED = "completed"  # 处理完成
@@ -194,7 +192,7 @@ async def create_task(request: CreateTaskRequest):
         # 构建返回数据
         task = {
             "task_id": task_id,
-            "status": "success",
+            "status": TaskStatus.SUCCESS,
             "video_url": request.video_url,
             "uid": request.uid,
             "result": None,
