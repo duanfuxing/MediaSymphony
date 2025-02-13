@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     API_V1_STR: str  # API版本前缀
     DEBUG: bool  # 调试模式开关
     APP_PORT: int  # 应用端口
+    X_TOKEN: str # 接口鉴权
 
     # API服务端口配置
     SCENE_DETECTION_API_PORT: int = 5000  # 场景分割服务端口

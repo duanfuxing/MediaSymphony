@@ -1,12 +1,14 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from app.config import settings
 from app.routers import video_tasks
 from app.utils.logger import Logger
-import traceback
+import logging
 from typing import Any
+from typing import List
 
 logger = Logger("video_tasks")
 
@@ -15,6 +17,9 @@ app = FastAPI(
     title=settings.APP_NAME,  # 设置应用名称
     debug=settings.DEBUG,  # 设置调试模式
 )
+
+# 配置 uvicorn 访问日志级别
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
 # 配置CORS中间件
 # 允许跨域资源共享，使前端应用能够安全地访问API
@@ -26,12 +31,46 @@ app.add_middleware(
     allow_headers=["*"],  # 允许所有HTTP头
 )
 
+class AuthMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, exclude_paths=None):
+        super().__init__(app)
+        self.exclude_paths = exclude_paths or []
+        self.valid_tokens = settings.X_TOKEN if isinstance(settings.X_TOKEN, list) else [settings.X_TOKEN]
+
+    async def dispatch(self, request: Request, call_next):
+        try:
+            if any(request.url.path.startswith(path) for path in self.exclude_paths):
+                return await call_next(request)
+
+            token = request.headers.get("x-token")
+            if not token:
+                return JSONResponse(
+                    status_code=401,
+                )
+            
+            if token not in self.valid_tokens:
+                return JSONResponse(
+                    status_code=403,
+                )
+
+            return await call_next(request)
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "服务器内部错误"}
+            )
+
 # 注册路由
 # 将视频处理任务相关的路由注册到应用
 app.include_router(
     video_tasks.router, 
     prefix=f"{settings.API_V1_STR}/video-tasks",  # 设置路由前缀
     tags=["视频处理任务"],  # 设置API文档标签
+)
+
+app.add_middleware(
+    AuthMiddleware,
+    exclude_paths=[]  # 排除 Swagger 文档路径
 )
 
 # 参数验证异常处理
@@ -59,7 +98,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             }
         )
     except Exception as e:
-        logger.error(f"处理参数验证异常时出错: {str(e)}\n{traceback.format_exc()}")
+        logger.error(f"处理参数验证异常时出错: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={
@@ -85,7 +124,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             }   
         )
     except Exception as e:
-        logger.error(f"处理HTTP异常时出错: {str(e)}\n{traceback.format_exc()}")
+        logger.error(f"处理HTTP异常时出错: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={
@@ -118,7 +157,6 @@ async def global_exception_handler(request: Request, exc: Exception):
             f"请求异常 - 路径: {request.url.path}\n"
             f"异常类型: {type(exc).__name__}\n"
             f"异常信息: {str(exc)}\n"
-            f"堆栈跟踪:\n{traceback.format_exc()}"
         )
         
         return JSONResponse(
@@ -130,7 +168,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         )
     except Exception as e:
         logger.critical(
-            f"全局异常处理器发生错误: {str(e)}\n{traceback.format_exc()}"
+            f"全局异常处理器发生错误: {str(e)}"
         )
         return JSONResponse(
             status_code=500,
@@ -146,7 +184,7 @@ def safe_endpoint(func: Any):
         try:
             return await func(*args, **kwargs)
         except Exception as e:
-            logger.error(f"路由处理发生异常: {str(e)}\n{traceback.format_exc()}")
+            logger.error(f"路由处理发生异常: {str(e)}")
             return JSONResponse(
                 status_code=500,
                 content={

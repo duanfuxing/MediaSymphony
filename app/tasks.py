@@ -10,7 +10,7 @@ import os
 import asyncio
 import httpx
 from datetime import datetime
-import json
+import shutil
 import aiofiles
 
 logger = Logger("celery_tasks")
@@ -122,7 +122,7 @@ async def update_task_step(
     """
     tasks_db.update_task_step_and_output(task_id, step, status, output, error)
 
-
+# 准备每一次任务的目录
 async def prepare_directories(task_id: str) -> tuple[str, str]:
     """准备任务所需的目录结构
 
@@ -246,6 +246,33 @@ async def prepare_directories(task_id: str) -> tuple[str, str]:
         })
         raise Exception(error_msg)
 
+# 删除每一次任务的目录
+async def cleanup_directories(task_id: str, upload_dir: str, output_path: str):
+    """清理任务相关目录
+
+    Args:
+        task_id (str): 任务ID
+        upload_dir (str): 上传目录路径
+        output_path (str): 输出目录路径
+    """
+    try:
+        # 删除上传目录
+        if os.path.exists(upload_dir):
+            shutil.rmtree(upload_dir)
+            logger.info(f"已删除上传目录", {"task_id": task_id, "path": upload_dir})
+
+        # 删除输出目录 
+        if os.path.exists(output_path):
+            shutil.rmtree(output_path)
+            logger.info(f"已删除输出目录", {"task_id": task_id, "path": output_path})
+
+    except Exception as e:
+        logger.error("清理目录失败", {
+            "task_id": task_id,
+            "error": str(e),
+            "upload_dir": upload_dir,
+            "output_path": output_path
+        })
 
 async def handle_scene_detection(
     task_id: str, video_path: str, output_path: str, video_split_audio_mode: str
@@ -320,7 +347,24 @@ async def handle_scene_detection(
                             mute_scenes.sort(key=lambda x: x["start_frame"])
                             # 更新数据库记录
                             # await update_task_step(task_id, "scene_cut", "success", json.dumps(mute_scenes))
-                            await update_task_step(task_id, "scene_cut", "success", mute_scenes)
+                            """mute_scenes
+                            [
+                                {
+                                    "is_mute": true, 
+                                    "end_time": "00:00:00", 
+                                    "end_frame": 11, 
+                                    "start_time": "00:00:00", 
+                                    "output_path": "/data/processed/2025/02/6e1c2ca1-ea4a-403a-bcae-3d10d377bca5/mute/segment_1.mp4", 
+                                    "start_frame": 0
+                                }
+                            ]
+                            """
+                            # 在保存到数据库前处理 mute_scenes 数据, 去掉 output_path
+                            cleaned_mute_scenes = [{
+                                k: v for k, v in scene.items() 
+                                if k != 'output_path'
+                            } for scene in mute_scenes]
+                            await update_task_step(task_id, "scene_cut", "success", cleaned_mute_scenes)
                             logger.info(
                                 "静音场景分割完成",
                                 {"task_id": task_id, "scenes_count": len(mute_scenes)},
@@ -683,6 +727,7 @@ def process_video(self, task_id: str, video_url: str, uid: str, video_split_audi
             # 将视频片段的 tos 地址保存到数据库中
             await update_task_step(task_id, "mute_scene_files", "success", mute_scene_files)
             await update_task_step(task_id, "un_mute_scene_files", "success", un_mute_scene_files)
+
             # 合并结果用户记录
             scene_files = mute_scene_files + un_mute_scene_files
 
@@ -708,6 +753,9 @@ def process_video(self, task_id: str, video_url: str, uid: str, video_split_audi
                 "task_id": task_id,
                 "result": result
             })
+
+            # 7. 任务完成后清理目录
+            await cleanup_directories(task_id, upload_dir, output_path)
 
             return result
 
