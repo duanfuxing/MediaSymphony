@@ -126,7 +126,7 @@ async def validate_video_size_and_type(video_url: str, task_id: str) -> None:
                 )
                 raise HTTPException(
                     status_code=400,
-                    detail=f"不支持的视频文件类型：{content_type}。支持的类型：MP4, AVI, MOV, MKV, WebM",
+                    detail=f"不支持的视频文件类型,支持的类型：MP4, AVI, MOV, MKV, WebM",
                 )
 
             logger.info(
@@ -139,7 +139,7 @@ async def validate_video_size_and_type(video_url: str, task_id: str) -> None:
             )
     except httpx.RequestError as e:
         logger.error("视频URL访问失败", {"task_id": task_id, "error": str(e)})
-        raise HTTPException(status_code=400, detail=f"视频URL访问失败：{str(e)}")
+        raise HTTPException(status_code=400, detail="视频URL访问失败")
 
 
 @router.post("/create", response_model=TaskResponse)
@@ -194,7 +194,7 @@ async def create_task(request: CreateTaskRequest):
         # 构建返回数据
         task = {
             "task_id": task_id,
-            "status": TaskStatus.PENDING,
+            "status": "success",
             "video_url": request.video_url,
             "uid": request.uid,
             "result": None,

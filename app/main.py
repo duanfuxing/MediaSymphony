@@ -82,7 +82,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             content={
                 "status": "error",
                 "error": exc.detail
-            }
+            }   
         )
     except Exception as e:
         logger.error(f"处理HTTP异常时出错: {str(e)}\n{traceback.format_exc()}")
