@@ -652,10 +652,12 @@ def process_video(self, task_id: str, video_url: str, uid: str, video_split_audi
 
             # 5. 上传结果到对象存储
             now = datetime.now()
+            # 视频文件 tos 地址
             base_path = f"videos/{now.year}/{now.month:02d}/{task_id}"
-
+            # 音频文件 tos 地址
+            audio_base_path = f"videos/{now.year}/{now.month:02d}/{task_id}"
             # 5-1. 上传音频文件
-            audio_object_key = await upload_audio_file(audio_path, base_path, uid, task_id)
+            audio_object_key = await upload_audio_file(audio_path, audio_base_path, uid, task_id)
 
             # 5-2. 上传转写文件
             transcription_object_key = await upload_transcription_file(
