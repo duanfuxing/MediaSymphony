@@ -1,32 +1,40 @@
-FROM tensorflow/tensorflow:2.18.0-gpu
+FROM tensorflow/tensorflow:devel-gpu-py3
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    software-properties-common \
-    vim \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    pkg-config \
+    rsync \
+    unzip \
+    zip \
+    zlib1g-dev \
+    wget \
+    git \
     ffmpeg \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    libfontconfig1 \
+    vim \
     && rm -rf /var/lib/apt/lists/*
 
-# 设置工作目录
-WORKDIR /app
-
-# 安装Python依赖
-RUN pip install --no-cache-dir ffmpeg-python \
-    opencv-python \
+RUN pip3 --no-cache-dir install \
+    Pillow \
+    h5py \
+    keras_applications \
+    keras_preprocessing \
+    matplotlib \
+    mock \
     numpy \
-    flask \
-    gunicorn \
-    pillow \
+    scipy \
+    sklearn \
+    pandas \
+    tensorflow-gpu \
     tqdm \
-    moviepy
-
-# 设置环境变量
-ENV NVIDIA_VISIBLE_DEVICES=all
-# 添加video编解码能力
-ENV NVIDIA_DRIVER_CAPABILITIES=compute,video,utility,graphics
-
-# 验证FFmpeg的GPU支持
-RUN ffmpeg -version && ffmpeg -hwaccels
+    ffmpeg-python \
+    pyyaml \
+    opencv-python \
+    opencv-contrib-python \
+    shapely
 
 # 暴露API端口
 EXPOSE 5000
