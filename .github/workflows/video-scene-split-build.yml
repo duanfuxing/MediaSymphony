@@ -42,7 +42,7 @@ jobs:
           file: app/services/video_scene_split/Dockerfile
           push: true
           tags: |
-            catchoco/transnetv2:latest
+            catchoco/transnetv2:cuda123
           platforms: linux/amd64
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
