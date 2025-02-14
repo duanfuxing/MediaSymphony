@@ -1,13 +1,11 @@
 FROM nvidia/cuda:12.3.0-devel-ubuntu22.04
 
-# 安装系统依赖和FFmpeg with CUDA支持
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     python3-pip \
     python3-dev \
     software-properties-common \
     vim \
-    && add-apt-repository ppa:savoury1/ffmpeg5 \
-    && apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libavcodec-dev \
     libavformat-dev \
