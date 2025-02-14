@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.3.0-devel-ubuntu22.04
+FROM nvidia/cuda:12.2.2-base-ubuntu22.04
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -29,9 +29,9 @@ RUN pip3 install --no-cache-dir ffmpeg-python \
     moviepy
 
 # 设置环境变量
-ENV NVIDIA_VISIBLE_DEVICES all
+ENV NVIDIA_VISIBLE_DEVICES=all
 # 添加video编解码能力
-ENV NVIDIA_DRIVER_CAPABILITIES compute,video,utility,graphics
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,video,utility,graphics
 
 # 验证FFmpeg的GPU支持
 RUN ffmpeg -version && ffmpeg -hwaccels
