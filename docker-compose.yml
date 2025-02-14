@@ -31,6 +31,8 @@ services:
       - redis_data:/data
       - ./app/services/redis/redis.conf:/usr/local/etc/redis/redis.conf
       - ./data/redis:/data/redis
+      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
     restart: unless-stopped
     networks:
       - media_symphony_net
@@ -53,6 +55,8 @@ services:
     volumes:
       - ./app/services/video_scene_split:/app
       - /data:/data
+      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
     ports:
       - "5000:5000"
     restart: unless-stopped
@@ -80,6 +84,8 @@ services:
     volumes:
       - ./app/services/audio_separation:/app
       - /data:/data
+      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
     networks:
       - media_symphony_net
     restart: unless-stopped
@@ -105,6 +111,8 @@ services:
     volumes:
       - ./app/services/audio_transcription:/app
       - /data:/data
+      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
     networks:
       - media_symphony_net
     restart: unless-stopped
