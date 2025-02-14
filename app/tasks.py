@@ -760,6 +760,8 @@ def process_video(self, task_id: str, video_url: str, uid: str, video_split_audi
             return result
 
         except Exception as e:
+            # 7. 任务完成后清理目录
+            await cleanup_directories(task_id, upload_dir, output_path)
             error_msg = str(e)
             logger.error("视频处理失败", {
                 "task_id": task_id,
