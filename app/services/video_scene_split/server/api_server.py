@@ -259,11 +259,34 @@ def process_video_segments(
         Exception: 当视频片段处理失败时抛出异常
     """
     formatted_scenes = []
+    video_duration = video_clip.duration
 
     for i, (start, end) in enumerate(scenes):
         try:
             start_time = start / video_clip.fps
-            end_time = end / video_clip.fps
+            end_time = min(end / video_clip.fps, video_duration)
+
+            # 如果起始时间已经超过视频总长度，跳过此片段
+            if start_time >= video_duration:
+                logger.warning(
+                    f"场景 {i + 1} 的起始时间 {start_time}s 超出视频总长度 {video_duration}s，已跳过"
+                )
+                continue
+
+            # 如果结束时间小于等于起始时间，跳过此片段
+            if end_time <= start_time:
+                logger.warning(
+                    f"场景 {i + 1} 的时间区间无效 ({start_time}s - {end_time}s)，已跳过"
+                )
+                continue
+
+            # 确保结束时间不超过视频总长度
+            if end_time > video_duration:
+                logger.warning(
+                    f"场景 {i + 1} 的结束时间从 {end_time}s 调整为视频总长度 {video_duration}s"
+                )
+                end_time = video_duration
+
             segment_clip = video_clip.subclipped(start_time, end_time)
 
             # 为每个视频片段生成唯一文件名
@@ -276,11 +299,13 @@ def process_video_segments(
             formatted_scenes.append(
                 {
                     "start_frame": int(start),
-                    "end_frame": int(end),
+                    "end_frame": int(min(end, video_duration * video_clip.fps)),
                     "start_time": format_time(start, video_clip.fps),
-                    "end_time": format_time(end, video_clip.fps),
+                    "end_time": format_time(
+                        int(end_time * video_clip.fps), video_clip.fps
+                    ),
                     "output_path": output_segment_path,
-                    "is_mute": video_split_audio_mode == AudioMode.MUTE
+                    "is_mute": video_split_audio_mode == AudioMode.MUTE,
                 }
             )
         except Exception as e:
@@ -301,22 +326,23 @@ def process_scene_detection():
         # 解析和验证请求数据
         data = request.get_json()
         if not data:
-            return jsonify({
-                "status": "error",
-                "message": "无效的请求数据"
-            }), 400
+            return jsonify({"status": "error", "message": "无效的请求数据"}), 400
         try:
-             # 验证请求数据
-            input_path, output_path, task_id, threshold, visualize, video_split_audio_mode = (
-                validate_request_data(data)
-            )
+            # 验证请求数据
+            (
+                input_path,
+                output_path,
+                task_id,
+                threshold,
+                visualize,
+                video_split_audio_mode,
+            ) = validate_request_data(data)
         except ValueError as ve:
-            return jsonify({
-                "status": "error",
-                "message": str(ve),
-                "task_id": task_id
-            }), 400
-        
+            return (
+                jsonify({"status": "error", "message": str(ve), "task_id": task_id}),
+                400,
+            )
+
         logger.info(
             "开始处理视频场景分割",
             {
@@ -437,17 +463,24 @@ def process_scene_detection():
             500,
         )
 
+
 # 添加全局错误处理
 @app.errorhandler(Exception)
 def handle_error(error):
     """处理所有未捕获的异常"""
     error_trace = traceback.format_exc()
     logger.error(f"未捕获的异常: {str(error)}\n{error_trace}")
-    return jsonify({
-        "status": "error",
-        "message": "服务器内部错误",
-        "error_type": type(error).__name__
-    }), 500
+    return (
+        jsonify(
+            {
+                "status": "error",
+                "message": "服务器内部错误",
+                "error_type": type(error).__name__,
+            }
+        ),
+        500,
+    )
+
 
 if __name__ == "__main__":
     try:
