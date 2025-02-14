@@ -1,4 +1,5 @@
-FROM nvidia/cuda:12.6.3-cudnn-devel-ubuntu22.04
+# FROM nvidia/cuda:12.6.3-cudnn-devel-ubuntu22.04
+FROM nvidia/cuda:12.3.0-devel-ubuntu22.04
 
 # 安装系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
