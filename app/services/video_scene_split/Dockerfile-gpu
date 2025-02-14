@@ -2,8 +2,6 @@ FROM tensorflow/tensorflow:2.18.0-gpu
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    python3-pip \
-    python3-dev \
     software-properties-common \
     vim \
     ffmpeg \
@@ -13,7 +11,7 @@ RUN apt-get update && \
 WORKDIR /app
 
 # 安装Python依赖
-RUN pip3 install --no-cache-dir ffmpeg-python \
+RUN pip install --no-cache-dir ffmpeg-python \
     opencv-python \
     numpy \
     flask \
