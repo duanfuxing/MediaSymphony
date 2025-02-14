@@ -1,40 +1,25 @@
-FROM tensorflow/tensorflow:devel-gpu-py3
+FROM tensorflow/tensorflow:2.1.1-gpu
 
+# 安装系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    pkg-config \
-    rsync \
-    unzip \
-    zip \
-    zlib1g-dev \
-    wget \
-    git \
+    python3-pip \
+    python3-dev \
     ffmpeg \
-    libsm6 \
-    libxext6 \
-    libxrender1 \
-    libfontconfig1 \
     vim \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 --no-cache-dir install \
-    Pillow \
-    h5py \
-    keras_applications \
-    keras_preprocessing \
-    matplotlib \
-    mock \
-    numpy \
-    scipy \
-    sklearn \
-    pandas \
-    tensorflow-gpu \
-    tqdm \
-    ffmpeg-python \
-    pyyaml \
+# 设置工作目录
+WORKDIR /app
+
+# 安装Python依赖
+RUN pip3 install --no-cache-dir ffmpeg-python \
     opencv-python \
-    opencv-contrib-python \
-    shapely
+    numpy \
+    flask \
+    gunicorn \
+    pillow \
+    tqdm \
+    moviepy
 
 # 暴露API端口
 EXPOSE 5000
