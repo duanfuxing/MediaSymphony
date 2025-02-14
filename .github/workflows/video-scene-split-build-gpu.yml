@@ -3,12 +3,8 @@ name: TransNetV2 Docker Build and Push
 on:
   push:
     paths:
-      - '.github/workflows/video-scene-split-build.yml'
-      - 'app/services/video_scene_split/Dockerfile'
-      - 'app/services/video_scene_split/inference/**'
-      - 'app/services/video_scene_split/setup.py'
-      - 'app/services/video_scene_split/server/api_server.py'
-      - 'app/services/video_scene_split/start.sh'
+      - '.github/workflows/video-scene-split-build-gpu.yml'
+      - 'app/services/video_scene_split/Dockerfile-gpu'
 
 jobs:
   build:
@@ -39,7 +35,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: app/services/video_scene_split
-          file: app/services/video_scene_split/Dockerfile
+          file: app/services/video_scene_split/Dockerfile-gpu
           push: true
           tags: |
             catchoco/transnetv2:gpu
