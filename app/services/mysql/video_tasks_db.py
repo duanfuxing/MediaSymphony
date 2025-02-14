@@ -96,7 +96,7 @@ class VideoTasksDB:
                 result = conn.execute(query, {"taskid": task_id}).fetchone()
                 if not result:
                     logger.info(f"任务不存在", {"task_id": task_id})
-                    raise HTTPException(status_code=404, detail="任务不存在")
+                    raise HTTPException(status_code=200, detail="任务不存在")
                 try:
                     task_progress = json.loads(result.task_progress) if result.task_progress else {}
                 except json.JSONDecodeError as e:
@@ -104,7 +104,7 @@ class VideoTasksDB:
                         "task_id": task_id,
                         "task_progress": result.task_progress
                     })
-                    raise HTTPException(status_code=404, detail="task_progress JSON解析失败")
+                    raise HTTPException(status_code=200, detail="task_progress JSON解析失败")
                 try:
                     error = json.loads(result.error) if result.error else None
                 except json.JSONDecodeError as e:
@@ -113,7 +113,7 @@ class VideoTasksDB:
                         "error": result.error
                     })
                     error = None
-                    raise HTTPException(status_code=404, detail="error字段 JSON解析失败")
+                    raise HTTPException(status_code=200, detail="error字段 JSON解析失败")
                 
                 return {
                     "task_id": result.taskid,
@@ -123,6 +123,8 @@ class VideoTasksDB:
                     "result": task_progress,
                     "error": error,
                 }
+        except HTTPException as http_ex:
+            raise http_ex
         except SQLAlchemyError as e:
             logger.error(f"获取任务失败: {str(e)}", {"task_id": task_id})
             raise HTTPException(status_code=500, detail="获取任务失败")
