@@ -30,3 +30,4 @@ jobs:
           file: app/services/video_scene_split/Dockerfile-gpu
           push: true
           tags: catchoco/transnetv2:gpu
+          platforms: linux/amd64
