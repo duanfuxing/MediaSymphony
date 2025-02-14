@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.2.2-base-ubuntu22.04
+FROM python:3.9-slim
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -7,11 +7,6 @@ RUN apt-get update && \
     software-properties-common \
     vim \
     ffmpeg \
-    libavcodec-dev \
-    libavformat-dev \
-    libavutil-dev \
-    libswscale-dev \
-    nvidia-cuda-toolkit \
     && rm -rf /var/lib/apt/lists/*
 
 # 设置工作目录
