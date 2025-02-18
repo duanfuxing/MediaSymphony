@@ -6,7 +6,6 @@ from enum import Enum
 import uuid
 import httpx
 import os
-from datetime import datetime
 import aiofiles
 import re
 import traceback
@@ -174,10 +173,6 @@ async def create_task(request: CreateTaskRequest):
         # 验证视频大小和类型
         await validate_video_size_and_type(request.video_url, task_id)
 
-        # 构建输出目录，根据config.py的配置
-        now = datetime.now()
-        output_dir = f"data/processed/{now.year}/{now.month:02d}/{task_id}"
-        os.makedirs(output_dir, exist_ok=True)
 
         # 创建任务记录
         if not tasks_db.create_task(task_id, request.video_url, request.uid):
