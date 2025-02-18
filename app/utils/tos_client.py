@@ -80,7 +80,7 @@ class TOSClient:
 
             # 对于大文件使用分片上传
             file_size = local_file_path.stat().st_size
-            if file_size > 100 * 1024 * 1024:  # 大于100MB使用分片上传
+            if file_size > 200 * 1024 * 1024:  # 大于200MB使用分片上传
                 return self._multipart_upload(
                     str(local_file_path), object_key, storage_class, metadata
                 )
