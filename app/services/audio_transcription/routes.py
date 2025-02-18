@@ -67,11 +67,11 @@ async def upload_audio(request: AudioRequest):
         try:
             file_size = os.path.getsize(request.audio_path)
 
-            max_size = 100 * 1024 * 1024  # 100MB
+            max_size = 200 * 1024 * 1024  # 200MB
             if file_size > max_size:
                 return ApiResponse(
                     status="error",
-                    message=f"文件大小超过限制(100MB): {file_size/1024/1024:.2f}MB",
+                    message=f"文件大小超过限制(200MB): {file_size/1024/1024:.2f}MB",
                     task_id=request.task_id
                 )
         except Exception as e:
