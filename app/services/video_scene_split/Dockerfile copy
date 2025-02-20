@@ -1,8 +1,7 @@
-FROM tensorflow/tensorflow:2.1.1-gpu
+FROM nvidia/cuda:12.6.3-cudnn-devel-ubuntu22.04
 
 # 安装系统依赖
-RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub \
-    && apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     python3-dev \
     ffmpeg \
@@ -18,9 +17,14 @@ RUN pip3 install --no-cache-dir ffmpeg-python \
     numpy \
     flask \
     gunicorn \
+    tensorflow \
     pillow \
     tqdm \
     moviepy
+
+# 设置环境变量
+ENV NVIDIA_VISIBLE_DEVICES all
+ENV NVIDIA_DRIVER_CAPABILITIES compute,video,utility
 
 # 暴露API端口
 EXPOSE 5000

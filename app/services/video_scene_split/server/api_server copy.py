@@ -31,31 +31,14 @@ import sys
 app = Flask(__name__)
 logger = Logger("scene_detection_api")
 
-# 模型实例
-detector_model = None
-
 # 配置常量
 SCENE_DETECTION_TIMEOUT = 1800  # 超时时间 1800s
+VIDEO_CODEC = "libx264"  # 视频编码器
 
 # 从配置文件获取允许的视频文件格式
 ALLOWED_EXTENSIONS = {
     ext.split("/")[-1] for ext in ["video/mp4", "video/avi", "video/mov"]
 }
-
-
-class AudioMode:
-    """音频处理模式"""
-
-    MUTE = "mute"  # 静音模式
-    UNMUTE = "un-mute"  # 非静音模式
-
-
-# 初始化模型
-def init_model():
-    global detector_model
-    logger.info("正在加载模型...")
-    detector_model = SceneDetector(logger=logger)
-    logger.info("模型加载完成")
 
 
 def allowed_file(filename: str) -> bool:
@@ -89,6 +72,13 @@ def format_time(frame_number: int, fps: float) -> str:
 
 def timeout_handler():
     raise TimeoutError("视频处理超时，请检查视频文件或调整超时时间设置")
+
+
+class AudioMode:
+    """音频处理模式"""
+
+    MUTE = "mute"  # 静音模式
+    UNMUTE = "un-mute"  # 非静音模式
 
 
 def validate_request_data(data):
@@ -157,12 +147,16 @@ def detect_video_scenes(input_path: str, threshold: float):
         raise ValueError("无法打开视频文件")
 
     try:
+        # 初始化场景检测器并执行处理
+        logger.info("正在加载模型...")
+        detector = SceneDetector(logger=logger)
+
         logger.info("正在处理视频...")
         # 获取视频的帧和预测结果
         video_frames, single_frame_predictions, all_frame_predictions = (
-            detector_model.predict_video(input_path)
+            detector.predict_video(input_path)
         )
-        scenes = detector_model.predictions_to_scenes(
+        scenes = detector.predictions_to_scenes(
             single_frame_predictions, threshold=threshold
         )
 
@@ -220,7 +214,7 @@ def write_video_segment(
 
             segment_clip.write_videofile(
                 output_path,
-                codec="h264_nvenc",
+                codec="libx264",
                 fps=video_clip.fps,
                 bitrate=original_video_bitrate,
                 preset="medium",
@@ -392,7 +386,7 @@ def process_scene_detection():
             # 如果需要可视化，生成预测结果的可视化图像
             if visualize:
                 logger.info("正在生成预测可视化...")
-                visualization = detector_model.visualize_predictions(
+                visualization = detector.visualize_predictions(
                     video_frames, [single_frame_predictions, all_frame_predictions]
                 )
                 visualization.save(f"{output_path}/predictions.png")
@@ -490,10 +484,7 @@ def handle_error(error):
 
 if __name__ == "__main__":
     try:
-        # 初始化模型
-        init_model()
-        # 启动Flask应用
         app.run(host="0.0.0.0", port=5000)
     except Exception as e:
-        logger.error(f"视频场景切割服务启动失败: {str(e)}")
+        logger.error(f"服务器启动失败: {str(e)}")
         sys.exit(1)

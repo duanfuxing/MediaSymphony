@@ -51,7 +51,7 @@ services:
               capabilities: [gpu]
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility,graphics
     volumes:
       - ./app/services/video_scene_split:/app
       - /data:/data

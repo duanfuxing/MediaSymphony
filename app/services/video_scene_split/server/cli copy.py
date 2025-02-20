@@ -145,23 +145,24 @@ def main():
             # 输出每个视频片段，使用原视频参数
             segment_clip.write_videofile(
                 output_path,
-                codec="libx264",  # CPU libx264
+                codec="libx264",  # 使用 libx264 编码器
                 fps=video_clip.fps,
-                bitrate=original_video_bitrate,
-                preset="slow",  # 使用标准的 FFmpeg 预设
-                threads=thread_count,
-                audio=args.audio_mode == AudioMode.UNMUTE,
+                bitrate=original_video_bitrate,  # 使用原视频码率
+                preset="medium",  # 使用平衡的预设
+                threads=thread_count,  # 动态设置线程数
+                audio=args.audio_mode
+                == AudioMode.UNMUTE,  # 根据音频处理模式决定是否包含音频
                 audio_codec=(
                     original_audio_codec
                     if args.audio_mode == AudioMode.UNMUTE
                     else None
-                ),
+                ),  # 根据音频处理模式设置音频编码器
                 audio_bitrate=(
                     original_audio_bitrate
                     if args.audio_mode == AudioMode.UNMUTE
                     else None
-                ),
-                logger=None,
+                ),  # 根据音频处理模式设置音频码率
+                logger=None,  # 禁用moviepy的内部logger
             )
 
         # 如果需要可视化，生成预测结果的可视化图像
