@@ -308,14 +308,12 @@ async def handle_scene_detection(
                     "task_id": task_id,
                     "video_split_audio_mode": AudioMode.UNMUTE
                 }
-                logger.info(f"scene-palyload{payload}")
+                
                 async with session.post(api_url, json=payload) as response:
-                    logger.info(f"xxx{response}")
                     if response.status == 200:
                         response_data = await response.json()
                         if response_data.get("status") == "success" and isinstance(response_data.get("data"), list):
                             unmute_scenes = response_data["data"]
-                            logger.info(f"unmute-scenes{unmute_scenes}")
                             scenes.extend(unmute_scenes)
                             logger.info(
                                 "有声场景分割完成",
@@ -340,7 +338,6 @@ async def handle_scene_detection(
                         response_data = await response.json()
                         if response_data.get("status") == "success" and isinstance(response_data.get("data"), list):
                             mute_scenes = response_data["data"]
-                            logger.info(f"mute-scenes{mute_scenes}")
                             scenes.extend(mute_scenes)
                             # 静音场景分割完成后 保存一份视频帧列表即可
                             # 按开始帧排序
@@ -670,6 +667,11 @@ def process_video(self, task_id: str, video_url: str, uid: str, video_split_audi
     Raises:
         Exception: 当任何子任务失败或超时时抛出异常
     """
+
+    # 获取当前任务的队列信息
+    current_queue = self.request.delivery_info.get('routing_key', 'unknown')
+    logger.info(f"任务 {task_id} 正在 {current_queue} 队列中执行")
+
     async def _process():
         try:
             logger.info("开始处理视频任务", {
