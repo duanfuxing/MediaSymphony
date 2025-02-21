@@ -1,6 +1,25 @@
 from celery import Celery
 from app.config import settings
 
+class TaskRouter:
+    def route_for_task(self, task_name, args=None, kwargs=None):
+        if task_name == 'app.tasks.process_video':
+            # 尝试从 kwargs 中获取 uid
+            if kwargs and 'uid' in kwargs:
+                uid = kwargs['uid']
+            # 如果在 kwargs 中找不到，尝试从 args 中获取
+            elif args and len(args) > 2:
+                uid = args[2]
+            else:
+                # 如果都找不到，使用默认队列
+                return {'queue': 'person'}
+            
+            # 根据 uid 决定队列
+            return {
+                'queue': 'batch' if uid == '0' else 'person'
+            }
+        return None
+
 # 创建Celery实例
 celery_app = Celery(
     "media_symphony",
@@ -27,7 +46,19 @@ celery_app.conf.update(
         }
     },
     
-    task_default_queue="default",
+    # 队列配置
+    task_default_queue="person",  # 默认队列改为 person
+    task_queues={
+        'batch': {
+            'exchange': 'batch',
+            'routing_key': 'batch'
+        },
+        'person': {
+            'exchange': 'person',
+            'routing_key': 'person'
+        }
+    },
+    task_routes=(TaskRouter(),),  # 使用自定义路由类
     
     # 任务执行设置
     result_expires=18000,
