@@ -195,8 +195,13 @@ async def create_task(request: CreateTaskRequest):
         }
 
         # 启动异步任务
-        process_video.delay(
-            task_id, request.video_url, request.uid, request.video_split_audio_mode
+        process_video.apply_async(
+            kwargs={
+                'task_id': task_id,
+                'video_url': request.video_url,
+                'uid': request.uid,
+                'video_split_audio_mode': request.video_split_audio_mode
+            }
         )
 
         logger.log_response(200, "/api/v1/video-tasks/create", {"task_id": task_id})
