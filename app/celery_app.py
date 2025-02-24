@@ -45,6 +45,7 @@ celery_app.conf.update(
             'timeout': 5.0
         }
     },
+    redis_backend_health_check_interval = 5,
     
     # 队列配置
     task_default_queue="person",  # 默认队列改为 person
