@@ -238,6 +238,13 @@ def write_video_segment(
                     else None
                 ),
                 logger=None,
+                ffmpeg_params=[
+                    "-pix_fmt", "yuv420p",       # 强制使用兼容的像素格式
+                    "-color_range", "tv",        # 限制颜色范围（16-235）
+                    "-colorspace", "bt709",      # 指定颜色空间为BT.709
+                    "-color_primaries", "bt709", # 设置颜色原色
+                    "-color_trc", "bt709"        # 定义传输特性
+                ]
             )
             return True
         except Exception as e:
