@@ -292,6 +292,13 @@ def process_video_segments(
                     f"场景 {i + 1} 的时间区间无效 ({start_time}s - {end_time}s)，已跳过"
                 )
                 continue
+            
+            # 检查片段时长是否小于2秒
+            # if end_time - start_time < 2:
+            #     logger.warning(
+            #         f"场景 {i + 1} 的时长小于2秒 ({start_time}s - {end_time}s)，已跳过"
+            #     )
+            #     continue
 
             # 确保结束时间不超过视频总长度
             if end_time > video_duration:
