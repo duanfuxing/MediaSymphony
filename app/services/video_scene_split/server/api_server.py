@@ -27,6 +27,7 @@ from functools import partial
 import time
 import traceback
 import sys
+from utils.video_frame import extract_video_cover_with_metadata
 
 app = Flask(__name__)
 logger = Logger("scene_detection_api")
@@ -314,6 +315,23 @@ def process_video_segments(
             write_video_segment(
                 segment_clip, output_segment_path, video_clip, video_split_audio_mode
             )
+            # time.sleep(1)
+            if video_split_audio_mode == AudioMode.MUTE:
+                # 获取视频封面和元数据
+                cover_output_path = os.path.join(output_path.replace("mute", "cover"), f"cover_{i + 1}.jpg")
+                metadata = extract_video_cover_with_metadata(output_segment_path, cover_output_path)
+                
+                # 将元数据转换为字典格式
+                meta_data_dict = {
+                    "duration": metadata.duration,
+                    "width": metadata.width,
+                    "height": metadata.height,
+                    "aspect_ratio": metadata.aspect_ratio,
+                    "aspect_ratio_text": metadata.aspect_ratio_text,
+                    "file_size": metadata.file_size,
+                    "fps": metadata.fps,
+                    "bitrate": metadata.bitrate
+                }
 
             # 添加场景信息
             formatted_scenes.append(
@@ -326,6 +344,9 @@ def process_video_segments(
                     ),
                     "output_path": output_segment_path,
                     "is_mute": video_split_audio_mode == AudioMode.MUTE,
+                    # 添加封面和元数据字段（仅当处理静音视频时）
+                    "cover": cover_output_path if video_split_audio_mode == AudioMode.MUTE and metadata.cover_path else None,
+                    "meta_data": meta_data_dict if video_split_audio_mode == AudioMode.MUTE else None
                 }
             )
         except Exception as e:
