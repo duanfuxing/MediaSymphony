@@ -41,8 +41,8 @@ class VideoTasksDB:
             db_url,
             pool_pre_ping=True,
             pool_recycle=1800,  # 30分钟回收连接
-            pool_size=5,
-            max_overflow=10
+            pool_size=10, # 5 * 2
+            max_overflow=20 # 10 * 2
         )
     
     @retry_on_connection_error()
