@@ -107,7 +107,7 @@ class TOSClient:
             )
             raise
         except Exception as e:
-            logger.error(f"未知错误: {str(e)}")
+            logger.error(f"文件上传失败-未知错误: {str(e)}")
             raise
 
     def _multipart_upload(

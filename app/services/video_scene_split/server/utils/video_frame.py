@@ -6,7 +6,7 @@ from typing import Tuple, Optional
 from moviepy import VideoFileClip
 from tqdm import tqdm
 from dataclasses import dataclass
-from logger import Logger
+from utils.logger import Logger
 
 
 # 配置日志记录器
@@ -338,11 +338,12 @@ def extract_video_cover_with_metadata(video_path: str, output_path: str) -> Vide
         if target_frame is not None:
             if save_frame_as_cover(target_frame, output_path):
                 cover_saved = True
-                logger.info(f"已保存{'理想' if is_ideal else '候选'}封面至 {output_path}")
             else:
                 logger.warning("保存封面失败")
+                raise VideoFrameError("保存封面失败")
         else:
             logger.warning("未能找到合适的封面帧")
+            raise VideoFrameError("未能找到合适的封面帧")
     except VideoFrameError as e:
         logger.warning(f"查找最佳封面失败: {str(e)}，尝试使用第一帧作为封面")
         # 尝试使用第一帧作为封面
@@ -368,17 +369,17 @@ def extract_video_cover_with_metadata(video_path: str, output_path: str) -> Vide
     
     return metadata
 
-if __name__ == "__main__":
-    video_path = "test-2.mp4"
-    output_path = "/home/eleven/cover.jpg"
-    metadata = extract_video_cover_with_metadata(video_path, output_path)
+# if __name__ == "__main__":
+#     video_path = "no-second.mp4"
+#     output_path = "/home/eleven/cover.jpg"
+#     metadata = extract_video_cover_with_metadata(video_path, output_path)
     
-    print(f"视频信息:")
-    print(f"时长: {metadata.duration:.2f}秒")
-    print(f"分辨率: {metadata.width}x{metadata.height}")
-    print(f"宽高比: {metadata.aspect_ratio:.2f} ({metadata.aspect_ratio_text})")
-    print(f"文件大小: {metadata.file_size/1024/1024:.2f}MB")
-    print(f"帧率: {metadata.fps:.2f}fps")
-    print(f"码率: {metadata.bitrate/1024:.2f}KB/s")
-    print(f"封面路径: {metadata.cover_path if metadata.cover_path else '未保存封面'}")
-    print(f"是否理想封面: {metadata.is_ideal_cover}")
+#     print(f"视频信息:")
+#     print(f"时长: {metadata.duration:.2f}秒")
+#     print(f"分辨率: {metadata.width}x{metadata.height}")
+#     print(f"宽高比: {metadata.aspect_ratio:.2f} ({metadata.aspect_ratio_text})")
+#     print(f"文件大小: {metadata.file_size/1024/1024:.2f}MB")
+#     print(f"帧率: {metadata.fps:.2f}fps")
+#     print(f"码率: {metadata.bitrate/1024:.2f}KB/s")
+#     print(f"封面路径: {metadata.cover_path if metadata.cover_path else '未保存封面'}")
+#     print(f"是否理想封面: {metadata.is_ideal_cover}")

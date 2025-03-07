@@ -19,11 +19,9 @@ from flask import Flask, request, jsonify
 import os
 import cv2
 from core.scene_detection import SceneDetector
-from werkzeug.utils import secure_filename
 from utils.logger import Logger
 from moviepy import VideoFileClip
 import threading
-from functools import partial
 import time
 import traceback
 import sys
@@ -315,40 +313,45 @@ def process_video_segments(
             write_video_segment(
                 segment_clip, output_segment_path, video_clip, video_split_audio_mode
             )
-            # time.sleep(1)
-            if video_split_audio_mode == AudioMode.MUTE:
+            # 非静音视频增加获取视频封面流程
+            if video_split_audio_mode == AudioMode.UNMUTE:
+                # 将 output_path(/data/processed/task_id/un_mute) => (/data/processed/task_id/cover)
+                cover_output_path = os.path.join(output_path.replace("un_mute", "cover"), f"cover_{i + 1}.jpg")
                 # 获取视频封面和元数据
-                cover_output_path = os.path.join(output_path.replace("mute", "cover"), f"cover_{i + 1}.jpg")
                 metadata = extract_video_cover_with_metadata(output_segment_path, cover_output_path)
                 
                 # 将元数据转换为字典格式
                 meta_data_dict = {
-                    "duration": metadata.duration,
+                    "duration": round(metadata.duration, 2),
                     "width": metadata.width,
                     "height": metadata.height,
                     "aspect_ratio": metadata.aspect_ratio,
                     "aspect_ratio_text": metadata.aspect_ratio_text,
-                    "file_size": metadata.file_size,
-                    "fps": metadata.fps,
-                    "bitrate": metadata.bitrate
+                    "file_size": int(metadata.file_size),
+                    "fps": int(metadata.fps),
+                    "bitrate": round(metadata.bitrate, 2)
                 }
 
-            # 添加场景信息
-            formatted_scenes.append(
-                {
-                    "start_frame": int(start),
-                    "end_frame": int(min(end, video_duration * video_clip.fps)),
-                    "start_time": format_time(start, video_clip.fps),
-                    "end_time": format_time(
-                        int(end_time * video_clip.fps), video_clip.fps
-                    ),
-                    "output_path": output_segment_path,
-                    "is_mute": video_split_audio_mode == AudioMode.MUTE,
-                    # 添加封面和元数据字段（仅当处理静音视频时）
-                    "cover": cover_output_path if video_split_audio_mode == AudioMode.MUTE and metadata.cover_path else None,
-                    "meta_data": meta_data_dict if video_split_audio_mode == AudioMode.MUTE else None
-                }
-            )
+                # 添加场景信息
+                formatted_scenes.append(
+                    {
+                        "start_frame": int(start),
+                        "output_path": output_segment_path,
+                        "is_mute": video_split_audio_mode == AudioMode.MUTE,
+                        "cover": cover_output_path,
+                        "meta_data": meta_data_dict 
+                    }
+                )
+            # 静音视频
+            else:
+                # 添加场景信息
+                formatted_scenes.append(
+                    {
+                        "start_frame": int(start),
+                        "output_path": output_segment_path,
+                        "is_mute": video_split_audio_mode == AudioMode.MUTE,
+                    }
+                )
         except Exception as e:
             logger.error(f"处理视频片段 {i + 1} 失败: {str(e)}")
             raise
