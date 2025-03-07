@@ -358,13 +358,23 @@ def format_task_result(task: dict) -> dict:
         raise HTTPException(status_code=404, detail="任务不存在")
     
     # 检查必需字段
-    required_fields = ["task_id", "status", "video_url", "uid", "result"]
+    required_fields = ["task_id", "status", "video_url", "uid"]
     missing_fields = [field for field in required_fields if field not in task]
     if missing_fields:
         raise HTTPException(
             status_code=500,
             detail=f"任务数据缺失必需字段: {', '.join(missing_fields)}"
         )
+
+    # 如果任务未完成，只返回基本信息
+    if task["status"] == TaskStatus.FAILED:
+        return {
+            "task_id": task["task_id"],
+            "status": task["status"],
+            "video_url": task["video_url"],
+            "uid": task["uid"],
+            "error":"error"
+        }
     
     # 检查 result 字段是否为字典类型
     if not isinstance(task.get("result"), dict):
@@ -394,23 +404,33 @@ def format_task_result(task: dict) -> dict:
     if task_result.get("audio_object_key", {}).get("status") == "success":
         formatted_result["result"]["audio_url"] = task_result["audio_object_key"]["output"]
     
-    # 获取静音和非静音视频并配对
+    # 获取封面列表
+    cover_list = task_result.get("cover_list", {}).get("output", [])
+    cover_dict = {str(i+1): item for i, item in enumerate(cover_list)}
+    
+    # 获取静音和非静音视频
     mute_videos = {
-        video["index"]: video["object_key"]
+        video.get("key", "").split("/")[-1].split(".")[0]: video
         for video in task_result.get("mute_scene_files", {}).get("output", [])
     }
     
     unmute_videos = {
-        video["index"]: video["object_key"]
+        video.get("key", "").split("/")[-1].split(".")[0]: video
         for video in task_result.get("un_mute_scene_files", {}).get("output", [])
     }
     
     # 合并视频列表
     all_indexes = sorted(set(mute_videos.keys()) | set(unmute_videos.keys()))
     for index in all_indexes:
+        mute_video = mute_videos.get(index, {})
+        unmute_video = unmute_videos.get(index, {})
+        cover_info = cover_dict.get(index, {})
+        
         video_pair = {
-            "mute_video_url": mute_videos.get(index, ""),
-            "un_mute_video_url": unmute_videos.get(index, "")
+            "mute_video_url": mute_video.get("key", ""),
+            "un_mute_video_url": unmute_video.get("key", ""),
+            "cover_url": cover_info.get("key", ""),
+            "meta_data": cover_info.get("meta_data", {})
         }
         formatted_result["result"]["video_list"].append(video_pair)
     
