@@ -9,6 +9,7 @@ async def audio_separation():
     return {
         "status": "success",
         "task_id": "456",
+        "has_audio_stream": True,
         "separated_audio": {
             "vocals": "test-UVR-vocal.wav",
             "accompaniment": "test-UVR-vocal.wav"
