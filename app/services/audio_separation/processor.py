@@ -29,12 +29,14 @@ class AudioSeparatorProcessor:
             bool: 是否包含音频流
         """
         try:
+            # 使用 ffprobe 专门检查音频流
             cmd = [
-                "/usr/bin/ffmpeg",
-                "-i", file_path,
-                "-af", "volumedetect",
-                "-f", "null",
-                "-"
+                "/usr/bin/ffprobe",
+                "-v", "error",
+                "-select_streams", "a",  # 只选择音频流
+                "-show_entries", "stream=codec_type",
+                "-of", "csv=p=0",
+                file_path
             ]
             
             result = subprocess.run(
@@ -44,9 +46,9 @@ class AudioSeparatorProcessor:
                 text=True,
                 check=False
             )
-            
-            # 检查ffmpeg输出中是否包含音频流信息
-            return "Stream #0:0: Audio" in result.stderr or "Stream #0:1: Audio" in result.stderr
+        
+            # 如果输出中包含 "audio"，则表示有音频流
+            return "audio" in result.stdout.lower()
         except Exception as e:
             new_logger.warning(f"检查音频流时出错: {str(e)}")
             return False
