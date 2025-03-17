@@ -18,12 +18,55 @@ class AudioSeparatorProcessor:
         if not self.ffmpeg_available:
             new_logger.warning("ffmpeg不可用，备选方案将无法使用")
 
+    def _check_audio_stream(self, file_path):
+        """
+        检查文件是否包含音频流
+        
+        Args:
+            file_path: 输入文件路径
+            
+        Returns:
+            bool: 是否包含音频流
+        """
+        try:
+            cmd = [
+                "/usr/bin/ffmpeg",
+                "-i", file_path,
+                "-af", "volumedetect",
+                "-f", "null",
+                "-"
+            ]
+            
+            result = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False
+            )
+            
+            # 检查ffmpeg输出中是否包含音频流信息
+            return "Stream #0:0: Audio" in result.stderr or "Stream #0:1: Audio" in result.stderr
+        except Exception as e:
+            new_logger.warning(f"检查音频流时出错: {str(e)}")
+            return False
+
     def process_audio(self, aduio_path: str, task_id: str, output_path):
         # 判断 output_path 目录是否存在，不存在创建
         if not os.path.exists(output_path):
             os.makedirs(output_path)
         
         new_logger.info(f"开始处理音频文件: {aduio_path}, 任务ID: {task_id}")
+        
+        # 检查是否包含音频流
+        has_audio = self._check_audio_stream(aduio_path)
+        if not has_audio:
+            new_logger.warning(f"文件不包含音频流: {aduio_path}")
+            return {
+                "has_audio_stream": False,
+                "vocals": "",
+                "accompaniment": ""
+            }
         
         try:
             # 实例化 separator 类
@@ -43,7 +86,12 @@ class AudioSeparatorProcessor:
             }
             
             # 尝试进行音频分离
-            return self.separator.separate(aduio_path, output_names)
+            result_paths = self.separator.separate(aduio_path, output_names)
+            return {
+                "has_audio_stream": True,
+                "vocals": result_paths[0],
+                "accompaniment": result_paths[1]
+            }
             
         except Exception as e:
             # 音频分离失败，使用ffmpeg提取原始音频作为备选方案
@@ -63,7 +111,11 @@ class AudioSeparatorProcessor:
                 
                 if os.path.exists(vocals_output_path):
                     new_logger.info(f"使用ffmpeg提取音频成功: {vocals_output_path}")
-                    return [vocals_output_path, vocals_output_path]
+                    return {
+                        "has_audio_stream": True,
+                        "vocals": vocals_output_path,
+                        "accompaniment": vocals_output_path
+                    }
                 else:
                     raise Exception("使用ffmpeg提取音频失败")
             except Exception as ffmpeg_error:

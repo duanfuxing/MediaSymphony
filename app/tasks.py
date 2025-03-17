@@ -358,7 +358,7 @@ async def handle_scene_detection(
 
 async def handle_audio_separation(
     task_id: str, video_path: str, output_path: str
-) -> str:
+) -> dict:
     """处理音频分离任务
 
     Args:
@@ -367,7 +367,9 @@ async def handle_audio_separation(
         output_path (str): 输出目录路径
 
     Returns:
-        str: 音频文件路径
+        dict: 包含以下字段的字典:
+            - has_audio_stream (bool): 是否包含音频流
+            - vocals_path (str): 人声音频文件路径，如果没有音频流则为空字符串
 
     Raises:
         Exception: 音频分离失败时抛出异常
@@ -394,14 +396,28 @@ async def handle_audio_separation(
                     
                     # 从 file_paths 中获取 vocals 路径
                     file_paths = result.get("file_paths", {})
-                    vocals_path = file_paths.get("vocals")
+                    vocals_path = file_paths.get("vocals", "")
                     
-                    if not vocals_path:
+                    # 检查是否有音频流
+                    has_audio_stream = True
+                    if "has_audio_stream" in result:
+                        has_audio_stream = result.get("has_audio_stream")
+                    
+                    if has_audio_stream and not vocals_path:
                         raise Exception("API返回结果中未找到 vocals 文件路径")
-                        
-                    await update_task_step(task_id, "audio_extract", "success", vocals_path)
-                    logger.info("音频分离完成", {"task_id": task_id, "audio_path": vocals_path})
-                    return vocals_path
+                    
+                    # 如果有音频流，则更新任务状态为成功
+                    if has_audio_stream:
+                        await update_task_step(task_id, "audio_extract", "success", vocals_path)
+                        logger.info("音频分离完成", {"task_id": task_id, "audio_path": vocals_path})
+                    else:
+                        await update_task_step(task_id, "audio_extract", "success", "无音频流")
+                        logger.info("视频不包含音频流", {"task_id": task_id})
+                    
+                    return {
+                        "has_audio_stream": has_audio_stream,
+                        "vocals_path": vocals_path
+                    }
                 else:
                     error_msg = await response.text()
                     raise Exception(f"音频分离API请求失败: {error_msg}")
@@ -719,24 +735,38 @@ def process_video(self, task_id: str, video_url: str, uid: str, video_split_audi
             await update_task_step(task_id, "scene_cut", "success")
 
             # 5. 人声分离
-            audio_path = await handle_audio_separation(task_id, video_path, output_path)
-            transcription = await handle_audio_transcription(
-                task_id, audio_path, output_path
-            )
-
-            # 5.1
-            # 音频文件 tos 地址
-            audio_base_path = f"audios/{now.year}/{now.month:02d}/{task_id}"
+            audio_info = await handle_audio_separation(task_id, video_path, output_path)
+            
             # 5.1.1视频封面文件 tos 地址
             cover_base_path = f"cover/{now.year}/{now.month:02d}/{task_id}"
-            # 5-1.2 上传音频文件
-            await upload_audio_file(audio_path, audio_base_path, uid, task_id)
-
-            # 5-2. 上传转写文件
-            # 转写文件保存在音频的 tos 目录下
-            await upload_transcription_file(
-                transcription, output_path, audio_base_path, uid, task_id
-            )
+            
+            # 检查是否有音频流
+            if audio_info["has_audio_stream"]:
+                audio_path = audio_info["vocals_path"]
+                
+                # 处理音频转写
+                transcription = await handle_audio_transcription(
+                    task_id, audio_path, output_path
+                )
+                
+                # 5.1
+                # 音频文件 tos 地址
+                audio_base_path = f"audios/{now.year}/{now.month:02d}/{task_id}"
+                
+                # 5-1.2 上传音频文件
+                await upload_audio_file(audio_path, audio_base_path, uid, task_id)
+                
+                # 5-2. 上传转写文件
+                # 转写文件保存在音频的 tos 目录下
+                await upload_transcription_file(
+                    transcription, output_path, audio_base_path, uid, task_id
+                )
+            else:
+                # 没有音频流，跳过音频处理步骤
+                logger.info("视频没有音频流，跳过音频处理步骤", {"task_id": task_id})
+                # 更新任务状态
+                await update_task_step(task_id, "text_convert", "success", "无音频流")
+            
             # 5-3. 上传场景切割文件
             # 上传视频封面到 tos
             cover_files = await upload_cover_files(un_mute_scenes, cover_base_path, uid, task_id)
