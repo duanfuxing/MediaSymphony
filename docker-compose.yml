@@ -59,14 +59,16 @@ services:
       - /data:/data
       - /etc/localtime:/etc/localtime
       - /etc/timezone:/etc/timezone
+      - /usr/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:ro
+      - /usr/lib32:/usr/lib32:ro
     ports:
       - "5000:5000"
     restart: unless-stopped
     healthcheck:
       test: nvidia-smi || exit 1
-      interval: 30m
-      timeout: 10s
-      retries: 3
+      interval: 10m
+      timeout: 20s
+      retries: 10
     networks:
       - media_symphony_net
 
@@ -96,6 +98,11 @@ services:
     networks:
       - media_symphony_net
     restart: unless-stopped
+    healthcheck:
+      test: nvidia-smi || exit 1
+      interval: 10m
+      timeout: 20s
+      retries: 10
 
   # 音频转写服务
   audio_transcription:
@@ -123,6 +130,11 @@ services:
     networks:
       - media_symphony_net
     restart: unless-stopped
+    healthcheck:
+      test: nvidia-smi || exit 1
+      interval: 10m
+      timeout: 20s
+      retries: 10
 
 
 volumes:
